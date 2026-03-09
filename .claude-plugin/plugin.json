@@ -1,0 +1,64 @@
+{
+  "name": "rafayels-engineering",
+  "version": "1.0.0",
+  "description": "Rafayel's engineering toolkit: end-to-end feature workflow with brainstorm-plan-work-review-compound pipeline, ADR management, dev logs, and project bootstrapping.",
+  "author": {
+    "name": "Rafayel Gardishyan"
+  },
+  "license": "MIT",
+  "keywords": [
+    "workflow-automation",
+    "feature-pipeline",
+    "code-review",
+    "knowledge-management",
+    "adr",
+    "dev-logs",
+    "go",
+    "typescript",
+    "sveltekit",
+    "python"
+  ],
+  "mcpServers": {
+    "context7": {
+      "type": "http",
+      "url": "https://mcp.context7.com/mcp"
+    }
+  },
+  "lspServers": {
+    "gopls": {
+      "command": "gopls",
+      "extensionToLanguage": {
+        ".go": "go"
+      }
+    },
+    "typescript": {
+      "command": "typescript-language-server",
+      "args": ["--stdio"],
+      "extensionToLanguage": {
+        ".ts": "typescript",
+        ".tsx": "typescriptreact",
+        ".js": "javascript",
+        ".jsx": "javascriptreact",
+        ".mts": "typescript",
+        ".cts": "typescript",
+        ".mjs": "javascript",
+        ".cjs": "javascript"
+      }
+    },
+    "svelte": {
+      "command": "svelteserver",
+      "args": ["--stdio"],
+      "extensionToLanguage": {
+        ".svelte": "svelte"
+      }
+    },
+    "pyright": {
+      "command": "pyright-langserver",
+      "args": ["--stdio"],
+      "extensionToLanguage": {
+        ".py": "python",
+        ".pyi": "python"
+      }
+    }
+  }
+}
