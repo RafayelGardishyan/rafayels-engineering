@@ -114,6 +114,7 @@ create_adr({
   project: "parai-core",
   title: "Descriptive title of the decision",
   status: "voorgesteld",
+  domein: "Backend Core",
   tags: ["relevant", "tags"],
   depends_on: ["ADR-003"],
   relates_to: ["ADR-007"]
@@ -123,6 +124,27 @@ create_adr({
 Then use `update_adr` to write the body with context, decision, and consequences.
 
 **Always link new ADRs** to existing related ones using `depends_on`, `relates_to`, or `supersedes`.
+
+### Domain Grouping (`domein`)
+
+Every ADR should have a `domein` field for Dataview grouping in Obsidian. The ADR Index page uses Dataview queries to automatically group ADRs by domain. Use existing domain names when possible:
+
+| Domain | Scope |
+|--------|-------|
+| Backend Core | Go services, module interfaces, config |
+| Frontend & UI | Svelte, Tailwind, components |
+| Auth & Beveiliging | Authentication, authorization, security |
+| Database | SurrealDB, Neo4j, storage patterns |
+| LLM Laag | LiteLLM, embeddings, streaming |
+| Testing | E2E, integration, coverage |
+| Quality & CI/CD | Linting, CI pipeline, code review |
+| Infrastructuur | S3, event queues, SSE |
+| Email | Templates, delivery, i18n |
+| Dev Workflow | Build tags, file watchers, Docker dev |
+| Internationalisatie | i18n, locale, Paraglide |
+| Chat Module | RAG pipeline, DAG engine |
+
+Create new domains sparingly — only when existing ones don't fit.
 
 ## Refactoring ADRs
 
@@ -243,3 +265,4 @@ add_relationship({ source_id: "ADR-005", project: "Compote", target_id: "parai-c
 | Forgetting to record decisions | If you chose X over Y for architectural reasons, that's an ADR |
 | Duplicating instead of merging | If two ADRs overlap, use `merge_adrs` instead of creating a third |
 | Giant catch-all ADRs | If an ADR covers multiple distinct decisions, use `split_adr` |
+| Missing `domein` field | Always set `domein` — the Dataview index groups by it |
