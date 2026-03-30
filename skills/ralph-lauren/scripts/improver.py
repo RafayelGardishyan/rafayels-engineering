@@ -59,66 +59,38 @@ inspect the page for this specific concern and fix any issues you find.""" if fo
 
 {f"You MUST follow this established design system for consistency:\\n\\n{philosophy}" if philosophy else "No design system exists yet. You will CREATE one during this iteration."}
 
-## Impeccable Design Skills Reference
+## Design Skills — NEVER/INSTEAD Framework
 
-Apply these skills in order of the assessment findings:
+For each area, follow the NEVER/INSTEAD structure. "NEVER" is what to avoid.
+"INSTEAD" is what to do. Be specific, not vague.
 
-### /typeset — Fix Typography
-- Establish a consistent type scale (e.g., 12/14/16/20/24/32/40/48px)
-- Set proper line heights (1.4-1.6 body, 1.1-1.3 headings)
-- Ensure line lengths are 45-75 characters for body text
-- Use max 2 font families, with clear roles (headings vs body)
-- Use font weight purposefully (400 body, 500-600 medium emphasis, 700 headings)
+### /typeset — Typography
+NEVER: Default to Inter, Roboto, Arial, or system-ui as primary font. Use random font sizes. Mix too many weights without purpose. Set all text to the same visual prominence.
+INSTEAD: Choose a distinctive display font that carries the design's voice. Establish a strict type scale (e.g., 12/14/16/20/24/32/48). Work the full typographic range — size, weight, case, spacing — to create clear hierarchy. Display type should be expressive; body text legible. Line heights: 1.4-1.6 body, 1.1-1.3 headings. Max line length: 45-75ch.
 
-### /arrange — Fix Layout & Spacing
-- Establish a spacing scale (4/8/12/16/24/32/48/64px)
-- Apply consistent grid alignment
-- Fix padding/margin inconsistencies
-- Ensure proper whitespace rhythm between sections
-- Fix alignment issues (elements off by 1-2px)
+### /arrange — Layout & Spacing
+NEVER: Use arbitrary padding/margin values. Leave inconsistent gaps between components. Default to centered-everything symmetric layouts.
+INSTEAD: Establish a spacing scale (4/8/12/16/24/32/48/64px) and use it everywhere. Create visual rhythm through consistent gaps. Use intentional asymmetry where it serves the content. Align elements to a grid — not off by 1-2px.
 
-### /colorize — Fix Color System
-- Define a cohesive palette: primary, secondary, accent, neutral scale
-- Ensure WCAG AA contrast ratios (4.5:1 normal text, 3:1 large text)
-- Use semantic colors: success/warning/error/info
-- Limit unique colors — consolidate similar shades
-- Define hover/active/focus state colors
+### /colorize — Color
+NEVER: Use a safe, evenly-distributed palette where every color has equal prominence. Default to purple gradients on white. Use more than 5-6 distinct colors without purpose.
+INSTEAD: Lead with ONE dominant color. Punctuate with sharp accents. Choose a clear direction: bold & saturated, moody & restrained, or high-contrast & minimal. Ensure WCAG AA contrast (4.5:1 text, 3:1 large text). Define semantic colors (success/warning/error). Define state colors (hover/active/focus/disabled) as a system.
 
-### /normalize — Align with Design System
-- Make all components follow the same patterns
-- Consolidate inconsistent border-radii, shadows, and transitions
-- Ensure button styles, input styles, card styles are uniform
+### /harden — Accessibility & Robustness
+NEVER: Use `<div onclick>` for buttons. Forget `alt` on images. Remove focus outlines without replacement. Use only px units for font sizes. Ignore `prefers-reduced-motion`.
+INSTEAD: Use semantic HTML (`<button>`, `<a>`, `<dialog>`, `<form>` with `<label for>`). Add `:focus-visible` styles. Use rem/em for font sizes. Add `@media (prefers-reduced-motion)` to disable animations. Ensure 44x44px minimum touch targets.
 
-### /harden — Error Handling & Edge Cases
-- Add loading/skeleton states
-- Handle empty states gracefully
-- Handle long text overflow (truncation, wrapping)
-- Handle missing images with fallbacks
+### /normalize — Design System Consistency
+NEVER: Let each component invent its own border-radius, shadow, or transition values. Use inconsistent button styles across the page.
+INSTEAD: Define tokens for radii (small/medium/large), shadows (sm/md/lg), and transitions (150ms ease, 300ms ease). Apply them uniformly. Every button, card, and input should feel like part of the same family.
 
-### /bolder — Amplify Timid Designs
-- Increase visual hierarchy contrast
-- Make CTAs more prominent
-- Add visual weight where needed
+### /bolder — Creative Distinction
+NEVER: Settle on the first common choice that comes to mind. If a font feels like an obvious solution, it's probably wrong. Default to the same aesthetic as every other developer landing page.
+INSTEAD: Explore alternatives deliberately. Make at least one bold, surprising choice — in typography, layout, or color — that gives the design a personality someone would remember. The final design should feel singular, with every detail working in service of one cohesive direction.
 
-### /quieter — Tone Down Loud Designs
-- Reduce visual noise
-- Simplify overly complex sections
-- Remove unnecessary decorations
-
-### /distill — Strip to Essence
-- Remove unnecessary elements
-- Simplify information architecture
-- Reduce cognitive load
-
-### /polish — Final Pass
-- Fix micro-interactions (hover states, focus rings, transitions)
-- Ensure consistent border-radii and shadow system
-- Add subtle transitions (150-300ms) for state changes
-
-### /clarify — Fix UX Copy
-- Make button labels action-oriented
-- Improve error messages to be helpful and specific
-- Write clear empty state descriptions
+### /polish — Final Craft
+NEVER: Ship without hover states. Leave transitions at 0ms (instant). Forget edge cases (overflow, long text, missing data).
+INSTEAD: Add smooth transitions (150-300ms). Ensure every interactive element has a hover/focus/active state. Handle loading, empty, and error states. Check overflow behavior on all text containers.
 
 ### /delight — Add Personality
 - Add subtle, purposeful animations

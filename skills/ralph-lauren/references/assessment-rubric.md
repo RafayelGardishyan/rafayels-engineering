@@ -1,139 +1,218 @@
-# Frontend Design Assessment Rubric
+# Frontend Design Assessment Rubric v2
 
-You are assessing a frontend page against six design quality dimensions. For each dimension, assign a score from 0-100 and list specific findings with severity ratings.
+Research-backed scoring criteria derived from:
+- Core Web Vitals and frontend performance metrics
+- Accessibility essentials for front-end developers
+- Empirically-validated AI frontend evaluation methodology
 
-## Severity Ratings
+## Scoring Overview
 
-- **P0 (Critical)**: Broken functionality, inaccessible content, unreadable text, completely wrong layout
-- **P1 (Major)**: Poor usability, inconsistent patterns, significant visual issues
-- **P2 (Minor)**: Polish issues, slight inconsistencies, minor spacing problems
-- **P3 (Nit)**: Subjective improvements, micro-optimizations, nice-to-haves
+| # | Dimension | Layer | Weight | Source |
+|---|-----------|-------|--------|--------|
+| 1 | Performance | Deterministic (CWV) | 15% | Core Web Vitals thresholds |
+| 2 | Accessibility | Deterministic (DOM) | 20% | 15-point a11y checklist |
+| 3 | Visual Polish & Coherence | Subjective (Claude) | 20% | impeccable.style + article 3 |
+| 4 | UX & Usability | Subjective (Claude) | 20% | Nielsen heuristics + article 2 |
+| 5 | Aesthetic Fit | Subjective (Claude) | 10% | Article 3 evaluation criteria |
+| 6 | Creative Distinction | Subjective (Claude) | 15% | Article 3 NEVER/INSTEAD |
 
-## Dimension 1: Heuristics (Weight: 20%)
+**Overall** = `perf*0.15 + a11y*0.20 + polish*0.20 + ux*0.20 + fit*0.10 + distinction*0.15`
 
-Score based on Nielsen's 10 Usability Heuristics:
+---
 
-1. **Visibility of system status** — Does the UI communicate what's happening? Loading states, active states, selected states, progress indicators.
-2. **Match between system and real world** — Does it use language and concepts the user understands? Are metaphors appropriate?
-3. **User control and freedom** — Can users undo, go back, escape? Are there emergency exits?
-4. **Consistency and standards** — Do similar elements behave the same way? Are platform conventions followed?
-5. **Error prevention** — Does the design prevent errors before they happen? Confirmations, constraints, smart defaults.
-6. **Recognition rather than recall** — Is information visible when needed? Are options discoverable?
-7. **Flexibility and efficiency** — Are there shortcuts for experts? Is the design efficient for both novice and experienced users?
-8. **Aesthetic and minimalist design** — Is every element necessary? Is there visual noise?
-9. **Help users recognize, diagnose, and recover from errors** — Are error messages helpful and actionable?
-10. **Help and documentation** — Is help available when needed?
+## Dimension 1: Performance (15%, Deterministic)
 
-**Scoring**: 90-100 = Excellent on all heuristics. 70-89 = Good with minor violations. 50-69 = Several noticeable violations. Below 50 = Significant usability problems.
+Scored automatically from Core Web Vitals. No LLM involved.
 
-## Dimension 2: Typography (Weight: 15%)
+| Metric | Good (100pts) | Needs Work (50pts) | Poor (0pts) |
+|--------|---------------|--------------------| ------------|
+| LCP | ≤ 2.5s | ≤ 4.0s | > 4.0s |
+| CLS | ≤ 0.1 | ≤ 0.25 | > 0.25 |
+| INP | ≤ 200ms | ≤ 500ms | > 500ms |
+| FCP | ≤ 1.8s | ≤ 3.0s | > 3.0s |
+| TTFB | ≤ 800ms | ≤ 1800ms | > 1800ms |
 
-- **Type scale**: Is there a consistent, intentional type scale (not random font sizes)?
-- **Hierarchy**: Is the visual hierarchy clear? Can you scan and understand the content structure?
-- **Line length**: Are lines of text between 45-75 characters for body text?
-- **Line height**: Is line-height appropriate (1.4-1.6 for body, tighter for headings)?
-- **Font pairing**: If multiple fonts are used, do they complement each other?
-- **Weight usage**: Are font weights used purposefully (not too many, not random)?
-- **Readability**: Is text easily readable at its displayed size and contrast?
+**Score** = average of per-metric scores (each 0/50/100 based on thresholds).
 
-**Scoring**: 90-100 = Professional typographic system. 70-89 = Good with minor issues. 50-69 = Inconsistent or problematic. Below 50 = Typography actively harms readability.
+Supplemented by Lighthouse category scores as additional context.
 
-## Dimension 3: Layout (Weight: 20%)
+---
 
-- **Grid consistency**: Does the layout follow a consistent grid or alignment system?
-- **Spacing rhythm**: Is spacing consistent and intentional (e.g., 4px/8px/16px/32px scale)?
-- **Alignment**: Are elements properly aligned (not off by 1-2px)?
-- **Whitespace**: Is whitespace used effectively — not too cramped, not too sparse?
-- **Responsive awareness**: Does the layout appear to handle its current viewport well?
-- **Content flow**: Does the layout guide the eye naturally through the content?
-- **Component spacing**: Are gaps between components consistent and proportional?
+## Dimension 2: Accessibility (20%, Deterministic)
 
-**Scoring**: 90-100 = Pixel-perfect spatial system. 70-89 = Good with minor spacing issues. 50-69 = Noticeably inconsistent spacing. Below 50 = Chaotic or broken layout.
+Scored from 15 concrete DOM checks + Lighthouse accessibility score.
 
-## Dimension 4: Color (Weight: 15%)
+**Formula**: `(dom_check_pass_rate * 60) + (lighthouse_a11y * 0.4)`
 
-- **Palette coherence**: Does the page use a deliberate, limited color palette?
-- **Contrast ratios**: Do text/background combinations meet WCAG AA (4.5:1 for normal text, 3:1 for large text)?
-- **Semantic meaning**: Are colors used meaningfully (red=error, green=success, etc.)?
-- **Harmony**: Do the colors work together aesthetically?
-- **Neutral usage**: Are neutrals (grays, whites, blacks) well-chosen and consistent?
-- **Accent restraint**: Are accent/brand colors used sparingly and purposefully?
-- **State colors**: Are hover, active, focus, disabled states visually distinct?
+### The 15 Checks (from accessibility essentials research)
 
-**Scoring**: 90-100 = Sophisticated color system. 70-89 = Good palette with minor issues. 50-69 = Inconsistent or clashing colors. Below 50 = Color actively harms the experience.
+**P0 — Critical (blocks screen reader users):**
+1. **Image alt text** — every `<img>` has `alt` attribute (empty `alt=""` OK for decorative)
+2. **No focus removal** — no `outline: none` on `:focus` without `:focus-visible` replacement
+3. **Color contrast** — sampled text/background combinations meet WCAG AA 4.5:1
 
-## Dimension 5: Craft (Weight: 15%)
+**P1 — Major (significantly harms usability):**
+4. **Semantic buttons** — no `<div onclick>` or `<span onclick>` as sole interactive elements
+5. **Form labels** — every `<input>` has `<label for="">` with matching `id`
+6. **No placeholder-as-label** — inputs with `placeholder` also have a proper `<label>`
+7. **Focus visible styles** — CSS includes `:focus-visible` rules
+8. **Reduced motion** — CSS includes `@media (prefers-reduced-motion: reduce)`
+9. **ARIA correctness** — `aria-label` only on interactive elements, not on `<div>` or `<span>`
+10. **Heading hierarchy** — heading levels don't skip (h1→h2→h3, not h1→h3)
 
-- **Border radii**: Are border radii consistent (same values throughout)?
-- **Shadow system**: Are shadows consistent and purposeful (elevation system)?
-- **Icon consistency**: Are icons from the same family, same size, same stroke weight?
-- **Transitions**: Are state changes smooth (hover effects, focus rings)?
-- **Loading states**: Are loading/skeleton states present where needed?
-- **Empty states**: Are empty/null states handled gracefully?
-- **Edge cases**: Are long text, missing images, and overflow handled?
-- **Micro-interactions**: Is there attention to small details that delight?
+**P2 — Minor (best practice):**
+11. **Form structure** — inputs wrapped in `<form>` with submit mechanism
+12. **Dialog element** — modals use `<dialog>` not `<div role="dialog">`
+13. **Skip link** — first focusable element is a skip-to-content link
+14. **Relative units** — font-size uses rem/em over px (>50% ratio)
+15. **Click target size** — interactive elements ≥ 44x44 CSS pixels
 
-**Scoring**: 90-100 = Impeccable attention to detail. 70-89 = Well-crafted with minor oversights. 50-69 = Noticeable lack of polish. Below 50 = Feels unfinished or broken.
+---
 
-## Dimension 6: Originality (Weight: 15%)
+## Dimension 3: Visual Polish & Coherence (20%, Subjective)
 
-- **Distinctiveness**: Does this feel like a custom design, or a generic template?
-- **Personality**: Does the design have a clear mood/identity/voice?
-- **Custom decisions**: Are there intentional design choices (not just defaults)?
-- **Avoids AI aesthetics**: Does it avoid telltale signs of AI-generated design (gratuitous gradients, generic hero sections, overuse of rounded cards)?
-- **Brand coherence**: If there's a brand identity, does the design express it?
-- **Creative confidence**: Are there bold choices that show design intention?
+The Claude assessor scores this based on:
 
-**Scoring**: 90-100 = Truly distinctive and memorable. 70-89 = Has personality with some generic elements. 50-69 = Mostly template-like. Below 50 = Indistinguishable from a default template.
+### Typography System
+- Is there a consistent, intentional type scale (not random sizes)?
+- Does display type carry the design's voice while body text stays legible?
+- Are font weights used purposefully to establish hierarchy?
+- Is the full typographic range used (size, weight, case, spacing)?
+- Line heights: 1.4-1.6 body, 1.1-1.3 headings?
+- Line lengths: 45-75 characters for body text?
 
-## Overall Score Calculation
+### Spacing System
+- Is there a consistent spacing scale (e.g., 4/8/12/16/24/32/48/64)?
+- Are padding and margins proportional and rhythmic?
+- Is whitespace used intentionally — not too cramped, not too sparse?
+- Do component gaps follow a predictable pattern?
 
-```
-overall = (
-    heuristics * 0.20 +
-    typography * 0.15 +
-    layout * 0.20 +
-    color * 0.15 +
-    craft * 0.15 +
-    originality * 0.15
-)
-```
+### Color System
+- Is the palette cohesive and deliberately limited?
+- Does it lead with a dominant color, punctuated by sharp accents?
+- Are neutrals well-chosen and consistent?
+- Are semantic colors present (success/warning/error/info)?
+- Do state colors (hover, active, focus, disabled) form a system?
+
+### Craft Details
+- Are border-radii, shadows, and transitions consistent?
+- Do micro-interactions (hover, focus, active) feel polished?
+- Are edge cases handled (overflow, long text, missing images)?
+
+**Scoring**: 90-100 = everything is part of one coherent system. 70-89 = mostly consistent with minor gaps. 50-69 = several inconsistencies. Below 50 = no system, ad-hoc choices throughout.
+
+---
+
+## Dimension 4: UX & Usability (20%, Subjective)
+
+Scored against Nielsen's 10 heuristics + practical interaction checks.
+
+### Nielsen's Heuristics (score each 0-10)
+1. Visibility of system status
+2. Match between system and real world
+3. User control and freedom
+4. Consistency and standards
+5. Error prevention
+6. Recognition rather than recall
+7. Flexibility and efficiency of use
+8. Aesthetic and minimalist design
+9. Error recognition, diagnosis, recovery
+10. Help and documentation
+
+### Practical Checks
+- Can a new user understand the page in 5 seconds?
+- Are CTAs obvious and actionable?
+- Do interactive elements look interactive (affordance)?
+- Is navigation intuitive — can users find what they need?
+- Are loading, empty, and error states present where needed?
+- Do forms work correctly (submit, validation, feedback)?
+
+**Scoring**: Nielsen total (0-100) averaged with practical assessment (0-100).
+
+---
+
+## Dimension 5: Aesthetic Fit (10%, Subjective)
+
+Does the design match its purpose and audience?
+
+- Is there a clear, committed aesthetic direction?
+- Does every element serve that direction?
+- Do typography, color, and layout create a unified mood?
+- Is the intensity level appropriate? (a marketing page ≠ a dashboard)
+- Does the design feel like it was made FOR this specific content?
+
+**Scoring**: 90-100 = singular vision, every detail in service. 70-89 = clear direction with some generic elements. 50-69 = no clear direction, template feel. Below 50 = design and content feel disconnected.
+
+---
+
+## Dimension 6: Creative Distinction (15%, Subjective)
+
+Does this avoid AI slop and have genuine personality?
+
+### NEVER
+- Generic fonts (Inter, Roboto, Arial, system-ui as primary)
+- Purple gradients on white backgrounds
+- Predictable centered card grids
+- Cookie-cutter hero → features → pricing → footer
+- Gratuitous rounded corners on everything
+- Overuse of emoji as visual elements
+- Same aesthetic as every other AI-generated landing page
+
+### INSTEAD
+- Distinctive typography that carries the design's voice
+- Bold, committed color palettes (saturated, moody, or high-contrast)
+- Layouts that surprise — asymmetry, overlap, grid-breaking
+- Bespoke details that show intentional design decisions
+- A personality someone would remember after closing the tab
+
+**Scoring**: 90-100 = truly distinctive, couldn't be mistaken for template. 70-89 = has personality, mostly avoids AI patterns. 50-69 = looks like a template with some custom touches. Below 50 = indistinguishable from AI-generated default.
+
+---
 
 ## Output Format
 
-Your assessment MUST be a JSON code block:
+The subjective assessment (dimensions 3-6) must output:
 
 ```json
 {
-  "scores": {
-    "heuristics": 0,
-    "typography": 0,
-    "layout": 0,
-    "color": 0,
-    "craft": 0,
-    "originality": 0,
-    "overall": 0
+  "subjective_scores": {
+    "visual_polish": 0,
+    "ux_usability": 0,
+    "aesthetic_fit": 0,
+    "creative_distinction": 0
+  },
+  "nielsen_heuristics": {
+    "visibility_of_system_status": 0,
+    "match_real_world": 0,
+    "user_control": 0,
+    "consistency": 0,
+    "error_prevention": 0,
+    "recognition_over_recall": 0,
+    "flexibility": 0,
+    "aesthetic_minimalism": 0,
+    "error_recovery": 0,
+    "help_documentation": 0
   },
   "findings": [
     {
-      "dimension": "layout",
+      "dimension": "visual_polish",
       "severity": "P1",
       "description": "Specific issue observed",
-      "recommendation": "Specific fix suggestion"
+      "recommendation": "NEVER: [what to avoid]. INSTEAD: [what to do].",
+      "impeccable_skill": "/typeset"
     }
   ],
-  "summary": "2-3 sentence overall assessment"
+  "links": [...],
+  "hover_assessment": {...},
+  "summary": "2-3 sentence assessment"
 }
 ```
 
-## Assessment Protocol
+The orchestrator combines deterministic scores (performance, accessibility) with subjective scores to produce the overall.
 
-1. Navigate to the URL with agent-browser
-2. Take a full-page screenshot for visual reference
-3. Take an interactive snapshot to understand DOM structure
-4. Score each dimension independently — be critical, not generous
-5. List ALL findings you observe, not just the worst ones
-6. Be specific in recommendations — reference actual elements, colors, sizes
-7. The overall score should reflect honest quality, not encouragement
+## Calibration
 
-**Calibration**: A score of 50 means "average website". 70 means "good, professional quality". 85+ means "excellent, top-tier design". Be honest — most sites score 40-65.
+- **50** = average website, passes basic checks
+- **70** = good, professional quality, few issues
+- **85+** = excellent, distinctive, production-ready
+- Be honest. Most sites score 45-65.

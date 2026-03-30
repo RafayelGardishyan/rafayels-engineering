@@ -1,8 +1,8 @@
-"""Subjective frontend design assessment via Claude Agent SDK.
+"""Subjective frontend design assessment via Claude Agent SDK — Layer 3.
 
-Spawns an independent Claude session that uses agent-browser to screenshot
-and inspect the page, then scores it against the assessment rubric.
-This session is READ-ONLY — it cannot modify project files.
+Scores 4 subjective dimensions: Visual Polish, UX & Usability, Aesthetic Fit,
+and Creative Distinction. Receives pre-computed deterministic results (CWV,
+accessibility checks) as context so the LLM focuses on what it's good at.
 """
 
 from __future__ import annotations
@@ -24,6 +24,7 @@ async def assess(
     url: str,
     cwd: str,
     deterministic_metrics: dict[str, Any],
+    accessibility_results: dict[str, Any],
     screenshot_path: str | None = None,
     segmentation_paths: list[str] | None = None,
     iteration: int = 1,
@@ -33,107 +34,74 @@ async def assess(
 ) -> dict[str, Any]:
     """Run subjective design assessment in a separate Claude session.
 
-    Args:
-        url: The frontend URL to assess.
-        cwd: Project working directory.
-        deterministic_metrics: Results from metrics.py.
-        screenshot_path: If provided, save the screenshot here.
-        segmentation_paths: Paths to pre-generated segmentation maps.
-        iteration: Current iteration number (1-based). Iterations 2+ use a faster protocol.
-        previous_changes: Changes.md content from the previous iteration.
-        previous_scores: Previous iteration's scores dict for comparison.
-        focus: Optional focus point to emphasize in assessment.
-
-    Returns:
-        Parsed assessment dict with scores, findings, and summary.
+    Only scores dimensions 3-6 (Visual Polish, UX, Aesthetic Fit, Creative
+    Distinction). Dimensions 1-2 (Performance, Accessibility) are scored
+    deterministically by the orchestrator.
     """
     is_followup = iteration > 1
-    focus_context = ""
-    if focus:
-        focus_context = f"""
-
-## USER FOCUS POINT (PRIORITY)
-
-The user has asked to focus on: **{focus}**
-
-This is your TOP PRIORITY. Score and evaluate this specific concern first,
-then do the general assessment. Findings related to this focus should be
-weighted more heavily and listed first."""
     rubric = RUBRIC_PATH.read_text()
     philosophy = _read_philosophy(cwd)
     metrics_json = json.dumps(deterministic_metrics, indent=2)
-    screenshot_instruction = ""
-    if screenshot_path:
-        screenshot_instruction = f"\nSave the full-page screenshot to: {screenshot_path}"
+    a11y_json = json.dumps(accessibility_results, indent=2)
 
     # Build segmentation context
-    segmentation_context = ""
+    seg_context = ""
     if segmentation_paths:
         seg_list = "\n".join(f"   - {p}" for p in segmentation_paths)
-        segmentation_context = f"""
+        seg_context = f"""
+## Segmentation Maps (pre-generated)
 
-## Pre-Generated Segmentation Maps
+DOM-based segmentation maps show element boundaries, types, and positions.
+Examine them with the Read tool to understand layout structure and spacing.
 
-Segmentation maps have been generated for the screenshots using MobileSAM.
-These color-coded overlays identify UI regions, components, spacing, and visual hierarchy.
-
-IMPORTANT: You MUST examine these segmentation maps by reading them as images.
-They are critical for your assessment — they reveal layout structure, spacing
-inconsistencies, and component boundaries that may not be obvious from screenshots alone.
-
-Segmentation map files:
+Files:
 {seg_list}
+"""
 
-Use the Read tool to view each segmentation map image, then reference what you
-see in your scoring and findings."""
+    # Build focus context
+    focus_context = ""
+    if focus:
+        focus_context = f"""
+## USER FOCUS POINT (TOP PRIORITY)
+
+The user specifically wants: **{focus}**
+
+Evaluate this FIRST. Findings related to this focus should be listed first
+and weighted more heavily in your scores."""
 
     # Build previous iteration context
     prev_context = ""
     if is_followup and previous_changes:
-        prev_scores_str = ""
-        if previous_scores:
-            prev_scores_str = f"""Previous scores: {json.dumps(previous_scores)}
-Focus your assessment on dimensions that scored LOWEST — those need the most attention."""
+        prev_scores_str = json.dumps(previous_scores, indent=2) if previous_scores else "N/A"
         prev_context = f"""
+## Previous Iteration
 
-## Previous Iteration Context
+Changes made last iteration:
+{previous_changes[:2000]}
 
-This is iteration {iteration}. The previous iteration made these changes:
+Previous subjective scores: {prev_scores_str}
 
-{previous_changes}
+IMPORTANT: Evaluate whether these changes IMPROVED things. If they made
+things worse, say so. If they helped, acknowledge it."""
 
-{prev_scores_str}
+    system_prompt = f"""You are an expert frontend design assessor scoring 4 SUBJECTIVE dimensions.
 
-IMPORTANT: Evaluate whether the previous changes ACTUALLY improved things.
-If they made things worse, say so explicitly. If they helped, acknowledge it."""
-
-    system_prompt = f"""You are an expert frontend design assessor performing a thorough, critical evaluation.
-You combine the methodologies of two professional design assessment frameworks:
-
-Your job is to assess the design quality of a web page — NOT to fix anything.
-You MUST be honest and critical. Do not inflate scores.
+Performance and Accessibility are already scored by deterministic tools.
+You focus ONLY on what requires human/AI judgment: visual quality, usability,
+aesthetic direction, and creative distinction.
 {focus_context}
-{"This is a FOLLOW-UP assessment (iteration " + str(iteration) + "). Be faster — skip full link validation and hover testing. Focus on re-scoring dimensions and evaluating whether previous changes helped." if is_followup else ""}
+{"This is a FOLLOW-UP iteration (" + str(iteration) + "). Be faster — skip full link/hover testing, focus on re-scoring and evaluating previous changes." if is_followup else ""}
 
-## Phase 1: /audit — Technical Quality Audit (impeccable.style)
+## Your 4 Dimensions
 
-Perform a structured technical audit across 5 dimensions. For each, assign a
-severity rating (P0=critical, P1=major, P2=minor, P3=nit) to every finding:
+### Dimension 3: Visual Polish & Coherence (0-100)
+- Typography: consistent scale, hierarchy, line heights, font pairing, weight usage
+- Spacing: consistent rhythm, proportional padding/margins, intentional whitespace
+- Color: cohesive limited palette, dominant + accent structure, semantic colors, state colors
+- Craft: consistent radii, shadows, transitions, hover states, edge case handling
 
-1. **Normalize** — Does the implementation align with the design system (or lack thereof)?
-   Check: token usage, component consistency, naming conventions, shared patterns.
-2. **Harden** — Are error states, edge cases, and loading states handled?
-   Check: empty states, long text overflow, missing images, error boundaries, skeleton screens.
-3. **Optimize** — Are there performance issues visible in the frontend?
-   Check: image sizes, layout shifts, render-blocking resources, unnecessary animations.
-4. **Adapt** — Does the page handle its current viewport well?
-   Check: responsive behavior, touch targets, text scaling, container queries.
-5. **Clarify** — Is the UX copy clear and helpful?
-   Check: button labels, error messages, empty state text, microcopy, CTAs.
-
-## Phase 2: /critique — UX & Design Review (impeccable.style)
-
-Score against Nielsen's 10 heuristics (each 0-10, total 0-100):
+### Dimension 4: UX & Usability (0-100)
+Score each of Nielsen's 10 heuristics (0-10), total = UX score:
 1. Visibility of system status
 2. Match between system and real world
 3. User control and freedom
@@ -142,61 +110,59 @@ Score against Nielsen's 10 heuristics (each 0-10, total 0-100):
 6. Recognition rather than recall
 7. Flexibility and efficiency of use
 8. Aesthetic and minimalist design
-9. Help users recognize, diagnose, recover from errors
+9. Error recognition, diagnosis, recovery
 10. Help and documentation
 
-Then test with persona archetypes:
-- **New user**: Can they understand the page in 5 seconds?
-- **Power user**: Are there efficient paths and keyboard shortcuts?
-- **Accessibility user**: Can they navigate with screen reader / keyboard only?
+Also check: Can a new user understand in 5 seconds? Are CTAs obvious? Do interactive elements look interactive?
 
-Assess cognitive load: Is information density appropriate? Too dense? Too sparse?
+### Dimension 5: Aesthetic Fit (0-100)
+- Is there a clear, committed aesthetic direction?
+- Does every element serve that direction?
+- Do typography, color, layout create a unified mood?
+- Does the design feel made FOR this specific content?
 
-{segmentation_context}
+### Dimension 6: Creative Distinction (0-100)
+NEVER: Inter/Roboto/Arial as primary font, purple gradients, predictable card grids, cookie-cutter hero→features→pricing layout, gratuitous rounded corners, same look as every AI-generated page.
+INSTEAD: distinctive typography, committed color palette, surprising layouts, bespoke details, memorable personality.
 
-## Phase 3: Detailed Dimension Scoring
+## Pre-Computed Deterministic Results (read-only context)
 
-{rubric}
-
-## Design System Context
-
-{f"The project has an established design philosophy:\\n\\n{philosophy}" if philosophy else "No design system has been established yet. Assess the page on its own merits."}
-
-## Deterministic Metrics (already collected)
-
-These are objective measurements. Use them to inform your subjective assessment:
-
+### Core Web Vitals & Lighthouse (Layer 1):
 ```json
 {metrics_json}
 ```
-{prev_context}"""
 
-    # Build the prompt — follow-up iterations are shorter
+### Accessibility Checks (Layer 2):
+```json
+{a11y_json}
+```
+{seg_context}
+
+## Design System Context
+{f"Established design philosophy:\\n{philosophy}" if philosophy else "No design system established yet."}
+{prev_context}
+
+## Rubric Reference
+{rubric}"""
+
+    # Build the prompt
     if is_followup:
-        prompt = f"""Assess the frontend design at: {url} (FOLLOW-UP iteration {iteration})
+        prompt = f"""Re-assess the frontend at: {url} (follow-up iteration {iteration})
 
-**Shortened Protocol — focus on re-scoring, not full exploration:**
+FASTER PROTOCOL:
+1. Open the page with agent-browser, take 2 screenshots (hero + one scroll)
+2. Examine segmentation maps if available (Read tool)
+3. Re-score all 4 subjective dimensions
+4. Evaluate whether previous changes improved things
+5. List only NEW or WORSENED findings
 
-1. Run: agent-browser open {url}
-2. Take 2-3 viewport screenshots (hero + one scroll position)
-   {screenshot_instruction}
-3. Examine the segmentation maps if provided (Read tool)
-4. Re-score ALL 6 dimensions (0-100) — compare against previous scores
-5. Evaluate whether the previous iteration's changes improved things
-6. List only NEW findings or findings that got WORSE
-7. Skip full link validation (only check if previously-broken links were fixed)
-8. Skip full hover testing (only check if previously-missing hover states were added)
-
-Output the JSON assessment in the same format as before.
-Be CRITICAL. If changes made things worse, the score should go DOWN."""
+Output JSON assessment."""
     else:
-        prompt = f"""Assess the frontend design at: {url}
+        prompt = f"""Assess the frontend at: {url}
 
-Follow this protocol exactly:
-
-**Step 1: Visual Inspection (MULTIPLE SCREENSHOTS)**
-1. Run: agent-browser open {url}
-2. Take MULTIPLE viewport screenshots by scrolling through the page:
+FULL PROTOCOL:
+1. Open the page: agent-browser open {url}
+2. Take viewport screenshots at multiple scroll positions:
    - agent-browser screenshot screenshot-hero.png
    - agent-browser eval "window.scrollTo(0, 800)" && sleep 1
    - agent-browser screenshot screenshot-section1.png
@@ -204,78 +170,27 @@ Follow this protocol exactly:
    - agent-browser screenshot screenshot-section2.png
    - agent-browser eval "window.scrollTo(0, 2400)" && sleep 1
    - agent-browser screenshot screenshot-section3.png
-   - agent-browser eval "window.scrollTo(0, document.body.scrollHeight)" && sleep 1
-   - agent-browser screenshot screenshot-footer.png
-   {screenshot_instruction}
-3. Run: agent-browser snapshot -i
-4. Examine ALL screenshots to see every section as a real user would (including scroll-triggered animations)
+3. Get interactive snapshot: agent-browser snapshot -i
+4. Examine segmentation maps (Read tool on each file)
+5. CHECK ALL LINKS:
+   - Get hrefs: agent-browser get attr href @eN for each link
+   - Test external links: curl -sI <url> | head -3
+   - For GitHub links, also check page content for "404"
+   - Report broken/placeholder links
+6. TEST HOVER STATES on representative elements:
+   - agent-browser hover @eN → sleep 0.5 → agent-browser screenshot
+   - Check: do all interactive elements HAVE hover states?
+   - Are transitions smooth? Are focus-visible styles present?
+7. Score all 4 subjective dimensions (0-100)
+8. List ALL findings with severity and NEVER/INSTEAD recommendations
 
-**Step 1b: Examine Segmentation Maps**
-If segmentation maps were provided (listed in the system prompt above), you MUST:
-1. Use the Read tool to view each segmentation map image file
-2. Analyze what the segmentation reveals about layout structure, spacing consistency, component boundaries
-3. Note any spacing irregularities, misaligned regions, or structural issues visible in the segmentation
-4. Reference segmentation findings in your dimension scores (especially Layout and Craft)
-
-**Step 1c: Link Validation**
-Check EVERY link on the page:
-1. Run: agent-browser snapshot -i --json (to get all interactive elements with refs)
-2. For each link element, run: agent-browser get attr href @eN
-3. For external links, run: curl -sI <url> | head -5 (check for 200, 301, 404, etc.)
-4. For GitHub links, also fetch the page content and check for "404" in the title (GitHub returns 200 for 404 pages)
-5. Report ALL broken links (404, 500), redirect chains, and placeholder '#' links as P0/P1 findings
-6. Include a "links" section in the JSON output listing every link, its href, and its status (working/broken/redirect/placeholder)
-
-**Step 1d: Hover State Assessment**
-Test hover states on ALL interactive elements:
-1. From the snapshot refs, identify all buttons, links, cards, and interactive elements
-2. For each distinct interactive element TYPE (not every instance — pick one representative):
-   - Run: agent-browser hover @eN
-   - Wait briefly for CSS transitions to complete (sleep 0.5)
-   - Run: agent-browser screenshot screenshot-hover-[element-type].png
-   - Note: what changes on hover? (color, shadow, scale, underline, background, cursor, opacity?)
-3. Assess the hover states:
-   - Are hover effects consistent across similar elements?
-   - Do all interactive elements HAVE hover states? (missing hover = P1)
-   - Are transitions smooth (not instant)?
-   - Do hover states provide clear affordance that the element is interactive?
-   - Are focus-visible states present for keyboard users?
-4. Include hover assessment findings in the main findings list with /polish or /delight skill tags
-
-**Step 2: /audit — Technical Quality Audit**
-Evaluate the 5 technical dimensions (normalize, harden, optimize, adapt, clarify).
-List every finding with severity P0-P3.
-
-**Step 3: /critique — UX & Design Review**
-Score each of Nielsen's 10 heuristics (0-10).
-Test against the 3 persona archetypes (new user, power user, accessibility user).
-Assess cognitive load.
-
-**Step 4: Dimension Scoring**
-Score each of the 6 dimensions (0-100) per the rubric:
-heuristics, typography, layout, color, craft, originality.
-
-**Step 5: Synthesize**
-Calculate the weighted overall score.
-For each finding, recommend which impeccable skill would fix it:
-- Typography issues → /typeset
-- Layout/spacing issues → /arrange
-- Needs more personality → /bolder, /delight
-- Too loud/cluttered → /quieter, /distill
-- Color issues → /colorize
-- UX copy issues → /clarify
-- Missing motion → /animate
-- Onboarding/empty states → /onboard
-- Error handling gaps → /harden
-- Performance issues → /optimize
-- Design system alignment → /normalize
-- Final polish → /polish
-
-Output your complete assessment as a single JSON code block with this structure:
+OUTPUT FORMAT — a single JSON code block:
 {{
-  "scores": {{
-    "heuristics": 0, "typography": 0, "layout": 0,
-    "color": 0, "craft": 0, "originality": 0, "overall": 0
+  "subjective_scores": {{
+    "visual_polish": 0,
+    "ux_usability": 0,
+    "aesthetic_fit": 0,
+    "creative_distinction": 0
   }},
   "nielsen_heuristics": {{
     "visibility_of_system_status": 0,
@@ -289,42 +204,28 @@ Output your complete assessment as a single JSON code block with this structure:
     "error_recovery": 0,
     "help_documentation": 0
   }},
-  "audit": {{
-    "normalize": ["findings..."],
-    "harden": ["findings..."],
-    "optimize": ["findings..."],
-    "adapt": ["findings..."],
-    "clarify": ["findings..."]
-  }},
   "links": [
-    {{
-      "text": "link text",
-      "href": "url or #",
-      "status": "working|broken|redirect|placeholder",
-      "http_code": 200
-    }}
+    {{"text": "...", "href": "...", "status": "working|broken|redirect|placeholder"}}
   ],
   "hover_assessment": {{
     "elements_tested": 0,
     "elements_with_hover": 0,
-    "elements_missing_hover": 0,
     "consistency": "consistent|inconsistent|none",
-    "transitions": "smooth|instant|missing",
-    "findings": ["specific hover-related findings"]
+    "transitions": "smooth|instant|missing"
   }},
   "findings": [
     {{
-      "dimension": "layout",
-      "severity": "P1",
+      "dimension": "visual_polish|ux_usability|aesthetic_fit|creative_distinction",
+      "severity": "P0|P1|P2|P3",
       "description": "Specific issue",
-      "recommendation": "Specific fix",
-      "impeccable_skill": "/arrange"
+      "recommendation": "NEVER: [what to avoid]. INSTEAD: [what to do].",
+      "impeccable_skill": "/typeset|/arrange|/colorize|/polish|/bolder|/delight|..."
     }}
   ],
-  "summary": "2-3 sentence overall assessment"
+  "summary": "2-3 sentence assessment"
 }}
 
-Remember: be CRITICAL, not encouraging. Most sites score 40-65. A score of 85+ means truly excellent."""
+Be CRITICAL. Most sites score 45-65. A score of 85+ means truly excellent."""
 
     result_text = ""
     async for message in query(
@@ -343,7 +244,6 @@ Remember: be CRITICAL, not encouraging. Most sites score 40-65. A score of 85+ m
 
 
 def _read_philosophy(cwd: str) -> str | None:
-    """Read philosophy.md if it exists and has content."""
     path = Path(cwd) / "docs" / "ralph-lauren" / "philosophy.md"
     if not path.exists():
         return None
@@ -356,17 +256,9 @@ def _read_philosophy(cwd: str) -> str | None:
 def _parse_assessment(text: str | None) -> dict[str, Any]:
     """Extract JSON assessment from Claude's response."""
     if not text:
-        return {
-            "scores": {
-                "heuristics": 0, "typography": 0, "layout": 0,
-                "color": 0, "craft": 0, "originality": 0, "overall": 0,
-            },
-            "findings": [],
-            "summary": "Assessment session returned no output — may have timed out or errored",
-            "_parse_error": True,
-        }
+        return _empty_assessment("Session returned no output")
 
-    # Strategy 1: JSON code block — use GREEDY match to capture the full block
+    # Strategy 1: JSON code block (greedy match)
     json_match = re.search(r"```(?:json)?\s*\n(\{.+\})\s*\n```", text, re.DOTALL)
     if json_match:
         try:
@@ -374,10 +266,10 @@ def _parse_assessment(text: str | None) -> dict[str, Any]:
         except json.JSONDecodeError:
             pass
 
-    # Strategy 2: Bracket-counting extraction from first { containing "scores"
+    # Strategy 2: Bracket-counting from first { containing "subjective_scores"
     start = -1
     for i, ch in enumerate(text):
-        if ch == '{' and '"scores"' in text[i:i+500]:
+        if ch == '{' and '"subjective_scores"' in text[i:i+500]:
             start = i
             break
 
@@ -395,35 +287,35 @@ def _parse_assessment(text: str | None) -> dict[str, Any]:
                         pass
                     break
 
-    # Strategy 3: Try the entire response as JSON
+    # Strategy 3: Whole text as JSON
     try:
         return json.loads(text.strip())
     except (json.JSONDecodeError, TypeError):
         pass
 
-    # Fallback: return a structured error with the raw text
+    return _empty_assessment(f"Failed to parse. Response length: {len(text)} chars", text)
+
+
+def _empty_assessment(reason: str, raw: str | None = None) -> dict[str, Any]:
     return {
-        "scores": {
-            "heuristics": 0, "typography": 0, "layout": 0,
-            "color": 0, "craft": 0, "originality": 0, "overall": 0,
+        "subjective_scores": {
+            "visual_polish": 0, "ux_usability": 0,
+            "aesthetic_fit": 0, "creative_distinction": 0,
         },
         "findings": [],
-        "summary": f"Failed to parse assessment. Raw response length: {len(text)} chars",
-        "_raw": text,
+        "summary": reason,
         "_parse_error": True,
+        **({"_raw": raw} if raw else {}),
     }
 
 
 async def main():
-    """CLI entry point for standalone testing."""
     import argparse
-
     parser = argparse.ArgumentParser(description="Run subjective design assessment")
-    parser.add_argument("--url", required=True, help="URL to assess")
-    parser.add_argument("--cwd", default=".", help="Project directory")
+    parser.add_argument("--url", required=True)
+    parser.add_argument("--cwd", default=".")
     args = parser.parse_args()
-
-    result = await assess(args.url, args.cwd, {})
+    result = await assess(args.url, args.cwd, {}, {})
     print(json.dumps(result, indent=2))
 
 

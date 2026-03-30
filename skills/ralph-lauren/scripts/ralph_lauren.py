@@ -28,6 +28,7 @@ os.environ["PYTHONUNBUFFERED"] = "1"
 SCRIPT_DIR = Path(__file__).parent
 sys.path.insert(0, str(SCRIPT_DIR))
 
+from accessibility import run_accessibility_checks
 from assessor import assess
 from improver import improve
 from metrics import collect_metrics
@@ -149,8 +150,8 @@ def write_summary(
         "",
         "## Score Progression",
         "",
-        "| Iteration | Overall | Heuristics | Typography | Layout | Color | Craft | Originality |",
-        "|-----------|---------|------------|------------|--------|-------|-------|-------------|",
+        "| Iter | Overall | Perf | A11y | Polish | UX | Fit | Distinction |",
+        "|------|---------|------|------|--------|----|-----|-------------|",
     ]
 
     for entry in scores_history:
@@ -158,12 +159,12 @@ def write_summary(
         lines.append(
             f"| {entry['iteration']} "
             f"| **{s.get('overall', '?')}** "
-            f"| {s.get('heuristics', '?')} "
-            f"| {s.get('typography', '?')} "
-            f"| {s.get('layout', '?')} "
-            f"| {s.get('color', '?')} "
-            f"| {s.get('craft', '?')} "
-            f"| {s.get('originality', '?')} |"
+            f"| {s.get('performance', '?')} "
+            f"| {s.get('accessibility', '?')} "
+            f"| {s.get('visual_polish', '?')} "
+            f"| {s.get('ux_usability', '?')} "
+            f"| {s.get('aesthetic_fit', '?')} "
+            f"| {s.get('creative_distinction', '?')} |"
         )
 
     if len(scores_history) >= 2:
@@ -263,33 +264,46 @@ async def run() -> None:
         _print(f"  ITERATION {i}/{max_iters}{'  (follow-up — faster protocol)' if is_followup else ''}")
         _print(f"{'='*60}")
 
-        # Step 1: Deterministic metrics (skip on follow-ups — they don't change much)
+        # Step 1: Layer 1 — Deterministic metrics (skip on follow-ups)
         metrics = {}
         if not skip_deterministic and not is_followup:
-            _print(f"\n  [1/6] Collecting deterministic metrics...")
+            _print(f"\n  [1/7] Layer 1: Collecting deterministic metrics...")
             metrics = await collect_metrics(url)
             (iter_dir / "metrics.json").write_text(json.dumps(metrics, indent=2))
             _print_metrics_summary(metrics)
         else:
-            _print(f"\n  [1/6] Skipping deterministic metrics {'(follow-up)' if is_followup else '(--skip-deterministic)'}")
+            _print(f"\n  [1/7] Layer 1: Skipped {'(follow-up)' if is_followup else '(--skip-deterministic)'}")
 
-        # Step 2: Take screenshots
-        _print(f"\n  [2/6] Taking viewport screenshots...")
+        # Step 2: Layer 2 — Accessibility DOM checks
+        a11y = {}
+        if not is_followup:
+            _print(f"\n  [2/7] Layer 2: Running accessibility checks...")
+            a11y = await run_accessibility_checks(url)
+            (iter_dir / "accessibility.json").write_text(json.dumps(a11y, indent=2))
+            a11y_score = a11y.get("score", 0)
+            passed = a11y.get("passed", 0)
+            failed = a11y.get("failed", 0)
+            _print(f"         A11y: {passed}/{passed + failed} checks passed (score: {a11y_score})")
+        else:
+            _print(f"\n  [2/7] Layer 2: Skipped (follow-up)")
+
+        # Step 3: Take screenshots
+        _print(f"\n  [3/7] Taking viewport screenshots...")
         await take_screenshot(url, iter_dir / "screenshot.png")
 
-        # Step 3: Generate segmentation maps
-        _print(f"\n  [3/6] Generating segmentation maps...")
+        # Step 4: Generate segmentation maps
+        _print(f"\n  [4/7] Generating segmentation maps...")
         await generate_segmentation_for_dir(iter_dir, url=url)
         segmentation_paths = sorted(iter_dir.glob("*-segmentation.png"))
         _print(f"         Generated {len(segmentation_paths)} segmentation maps")
 
-        # Step 4: Subjective assessment — with previous iteration context
+        # Step 5: Layer 3 — Subjective assessment (Claude session)
         if is_followup:
-            _print(f"\n  [4/6] Running follow-up assessment (reviewing previous changes)...")
+            _print(f"\n  [5/7] Layer 3: Follow-up assessment (reviewing previous changes)...")
         else:
-            _print(f"\n  [4/6] Running full assessment (hover + link testing)...")
+            _print(f"\n  [5/7] Layer 3: Full subjective assessment (hover + link testing)...")
         assessment = await assess(
-            url, cwd, metrics,
+            url, cwd, metrics, a11y,
             screenshot_path=str(iter_dir / "screenshot.png"),
             segmentation_paths=[str(p) for p in segmentation_paths],
             iteration=i,
@@ -299,31 +313,32 @@ async def run() -> None:
         )
         (iter_dir / "assessment.json").write_text(json.dumps(assessment, indent=2))
 
-        overall = assessment.get("scores", {}).get("overall", 0)
+        # Compute combined overall score (all 6 dimensions)
+        overall, all_scores = _compute_overall(metrics, a11y, assessment)
         scores_history.append({
             "iteration": i,
             "score": overall,
-            "scores": assessment.get("scores", {}),
+            "scores": all_scores,
         })
 
-        _print_assessment_summary(assessment)
+        _print_assessment_summary(all_scores, assessment)
 
-        # Step 5: Check if target reached
+        # Step 6: Check if target reached
         if overall >= target:
             _print(f"\n  Target score {target} reached with {overall}! Stopping.")
             break
 
-        # Step 5: Run improvement (independent Claude session)
-        _print(f"\n  [5/6] Running improvement session...")
+        # Step 6: Run improvement (independent Claude session)
+        _print(f"\n  [6/7] Running improvement session...")
         changes = await improve(url, cwd, assessment, i, focus=focus)
         (iter_dir / "changes.md").write_text(f"# Iteration {i} Changes\n\n{changes}")
 
         # Save context for next iteration
         previous_changes = changes
-        previous_scores = assessment.get("scores", {})
+        previous_scores = all_scores
 
-        # Step 6: Post-improvement screenshots
-        _print(f"\n  [6/6] Taking post-improvement screenshots...")
+        # Step 7: Post-improvement screenshots
+        _print(f"\n  [7/7] Taking post-improvement screenshots...")
         await take_screenshot(url, iter_dir / "screenshot-after.png")
 
     # Write summary
@@ -344,36 +359,92 @@ async def run() -> None:
     _print("")
 
 
-def _print_metrics_summary(metrics: dict) -> None:
-    """Print a compact summary of deterministic metrics."""
+def _compute_overall(
+    metrics: dict, a11y: dict, assessment: dict
+) -> tuple[int, dict[str, Any]]:
+    """Combine deterministic (Layer 1+2) and subjective (Layer 3) scores.
+
+    Weights: performance=15%, accessibility=20%, visual_polish=20%,
+             ux_usability=20%, aesthetic_fit=10%, creative_distinction=15%
+
+    Returns (overall_score, all_scores_dict).
+    """
+    # Layer 1: Performance from CWV
+    cwv = metrics.get("core_web_vitals", {})
+    perf_score = cwv.get("score", 0) if isinstance(cwv, dict) and "error" not in cwv else 0
+
+    # Layer 2: Accessibility from DOM checks + Lighthouse a11y
+    a11y_dom_score = a11y.get("score", 0) if isinstance(a11y, dict) and "error" not in a11y else 0
+    lh_a11y = 0
     lh = metrics.get("lighthouse", {})
     if isinstance(lh, dict) and "error" not in lh:
+        lh_a11y = lh.get("accessibility", 0) or 0
+    a11y_score = round(a11y_dom_score * 0.6 + lh_a11y * 0.4)
+
+    # Layer 3: Subjective scores
+    subj = assessment.get("subjective_scores", {})
+    visual_polish = subj.get("visual_polish", 0)
+    ux_usability = subj.get("ux_usability", 0)
+    aesthetic_fit = subj.get("aesthetic_fit", 0)
+    creative_distinction = subj.get("creative_distinction", 0)
+
+    overall = round(
+        perf_score * 0.15
+        + a11y_score * 0.20
+        + visual_polish * 0.20
+        + ux_usability * 0.20
+        + aesthetic_fit * 0.10
+        + creative_distinction * 0.15
+    )
+
+    all_scores = {
+        "overall": overall,
+        "performance": perf_score,
+        "accessibility": a11y_score,
+        "visual_polish": visual_polish,
+        "ux_usability": ux_usability,
+        "aesthetic_fit": aesthetic_fit,
+        "creative_distinction": creative_distinction,
+    }
+    return overall, all_scores
+
+
+def _print_metrics_summary(metrics: dict) -> None:
+    """Print a compact summary of deterministic metrics."""
+    cwv = metrics.get("core_web_vitals", {})
+    if isinstance(cwv, dict) and "error" not in cwv:
         parts = []
-        for key in ("performance", "accessibility", "best_practices", "seo"):
-            val = lh.get(key)
-            if val is not None:
-                parts.append(f"{key}={val}")
+        for m in ("lcp", "cls", "fcp", "ttfb"):
+            entry = cwv.get(m, {})
+            if isinstance(entry, dict) and entry.get("value") is not None:
+                parts.append(f"{m}={entry['value']}({entry['rating'][0]})")
+        if parts:
+            _print(f"         CWV: {', '.join(parts)} → score={cwv.get('score', '?')}")
+
+    lh = metrics.get("lighthouse", {})
+    if isinstance(lh, dict) and "error" not in lh:
+        parts = [f"{k}={v}" for k, v in lh.items() if v is not None and k != "error"]
         if parts:
             _print(f"         Lighthouse: {', '.join(parts)}")
 
-    axe = metrics.get("accessibility", {})
-    if isinstance(axe, dict) and "violations_count" in axe:
-        _print(f"         Axe: {axe['violations_count']} violations, {axe.get('passes_count', '?')} passes")
-
     css = metrics.get("css", {})
     if isinstance(css, dict) and "selector_count" in css:
-        _print(f"         CSS: {css['selector_count']} selectors, {css['unique_hex_colors']} colors, {css.get('important_count', 0)} !important")
+        units = css.get("unit_analysis", {})
+        px_ratio = units.get("px_ratio", "?")
+        _print(f"         CSS: {css['selector_count']} selectors, {css.get('unique_hex_colors', '?')} colors, px_ratio={px_ratio}")
 
 
-def _print_assessment_summary(assessment: dict) -> None:
-    """Print a compact summary of the subjective assessment."""
-    scores = assessment.get("scores", {})
-    overall = scores.get("overall", "?")
-    _print(f"\n  Assessment scores:")
-    _print(f"    Overall:     {overall}/100")
-    for dim in ("heuristics", "typography", "layout", "color", "craft", "originality"):
-        val = scores.get(dim, "?")
-        _print(f"    {dim:12s}: {val}/100")
+def _print_assessment_summary(all_scores: dict, assessment: dict) -> None:
+    """Print combined scores summary."""
+    overall = all_scores.get("overall", "?")
+    _print(f"\n  Combined scores (6 dimensions):")
+    _print(f"    Overall:              {overall}/100")
+    _print(f"    Performance (det):    {all_scores.get('performance', '?')}/100")
+    _print(f"    Accessibility (det):  {all_scores.get('accessibility', '?')}/100")
+    _print(f"    Visual Polish (subj): {all_scores.get('visual_polish', '?')}/100")
+    _print(f"    UX & Usability (subj):{all_scores.get('ux_usability', '?')}/100")
+    _print(f"    Aesthetic Fit (subj): {all_scores.get('aesthetic_fit', '?')}/100")
+    _print(f"    Creative Dist (subj): {all_scores.get('creative_distinction', '?')}/100")
 
     findings = assessment.get("findings", [])
     by_severity = {}
@@ -381,23 +452,11 @@ def _print_assessment_summary(assessment: dict) -> None:
         sev = f.get("severity", "?")
         by_severity[sev] = by_severity.get(sev, 0) + 1
     if by_severity:
-        parts = [f"{k}={v}" for k, v in sorted(by_severity.items())]
-        _print(f"    Findings:    {', '.join(parts)}")
-
-    # Print link validation results
-    links = assessment.get("links", [])
-    broken = [l for l in links if l.get("status") in ("broken", "placeholder")]
-    if broken:
-        _print(f"    Broken links: {len(broken)}")
-
-    # Print hover assessment
-    hover = assessment.get("hover_assessment", {})
-    if hover:
-        _print(f"    Hover states: {hover.get('elements_with_hover', '?')}/{hover.get('elements_tested', '?')} elements")
+        _print(f"    Findings: {', '.join(f'{k}={v}' for k, v in sorted(by_severity.items()))}")
 
     summary = assessment.get("summary", "")
     if summary:
-        _print(f"    Summary:     {summary[:120]}")
+        _print(f"    Summary: {summary[:140]}")
 
 
 def main():

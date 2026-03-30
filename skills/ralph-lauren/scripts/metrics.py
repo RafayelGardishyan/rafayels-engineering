@@ -1,7 +1,7 @@
-"""Deterministic frontend metrics collection.
+"""Deterministic frontend metrics collection — Layer 1.
 
-Collects Lighthouse scores, axe accessibility results, and CSS statistics
-without involving any LLM — pure subprocess calls and HTML parsing.
+Collects Core Web Vitals (via agent-browser), Lighthouse scores, and CSS
+statistics without involving any LLM — pure subprocess calls and parsing.
 """
 
 from __future__ import annotations
@@ -10,34 +10,184 @@ import asyncio
 import json
 import re
 import shutil
-import subprocess
 import tempfile
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
+# ---------------------------------------------------------------------------
+# Core Web Vitals thresholds: (good_upper, needs_work_upper)
+# Values beyond needs_work_upper are rated "poor".
+# ---------------------------------------------------------------------------
+_CWV_THRESHOLDS: dict[str, tuple[float, float]] = {
+    "lcp": (2.5, 4.0),       # seconds
+    "cls": (0.1, 0.25),      # unitless
+    "fcp": (1.8, 3.0),       # seconds
+    "ttfb": (0.8, 1.8),      # seconds
+    "inp": (0.200, 0.500),   # seconds (200ms / 500ms)
+}
+
+
+def _rate(metric: str, value: float | None) -> str:
+    if value is None:
+        return "unknown"
+    good, needs_work = _CWV_THRESHOLDS[metric]
+    if value <= good:
+        return "good"
+    if value <= needs_work:
+        return "needs-work"
+    return "poor"
+
+
+def _cwv_score(ratings: list[str]) -> int:
+    """Average non-null CWV ratings into a 0-100 score."""
+    score_map = {"good": 100, "needs-work": 50, "poor": 0}
+    scored = [score_map[r] for r in ratings if r in score_map]
+    if not scored:
+        return 0
+    return round(sum(scored) / len(scored))
+
+
+# ---------------------------------------------------------------------------
+# Public entry point
+# ---------------------------------------------------------------------------
 
 async def collect_metrics(url: str) -> dict[str, Any]:
     """Collect all deterministic metrics for a URL.
 
-    Returns a dict with lighthouse, accessibility, and css sections.
+    Returns a dict with core_web_vitals, lighthouse, and css sections.
     Missing tools are skipped gracefully.
     """
-    lighthouse, axe, css = await asyncio.gather(
+    cwv, lighthouse, css = await asyncio.gather(
+        collect_core_web_vitals(url),
         run_lighthouse(url),
-        run_axe(url),
         analyze_css(url),
     )
     return {
+        "core_web_vitals": cwv,
         "lighthouse": lighthouse,
-        "accessibility": axe,
         "css": css,
     }
 
+
+# ---------------------------------------------------------------------------
+# Core Web Vitals via agent-browser
+# ---------------------------------------------------------------------------
+
+async def collect_core_web_vitals(url: str) -> dict[str, Any]:
+    """Inject web-vitals library via agent-browser and read back CWV metrics.
+
+    Flow: load page -> inject web-vitals IIFE from CDN -> register metric
+    callbacks that write JSON to document.title -> wait -> read title back.
+    """
+    if not shutil.which("agent-browser"):
+        return {"error": "agent-browser not found — skipping Core Web Vitals"}
+
+    try:
+        print("  Collecting Core Web Vitals...", flush=True)
+
+        # Navigate to the target page
+        proc = await asyncio.create_subprocess_exec(
+            "agent-browser", "open", url,
+            stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+        )
+        await asyncio.wait_for(proc.communicate(), timeout=15)
+
+        # Inject web-vitals library and register observers.
+        # Results accumulate in window.__cwv, then get written to document.title.
+        inject_js = """
+            (function() {
+                window.__cwv = {};
+                var s = document.createElement('script');
+                s.src = 'https://unpkg.com/web-vitals@4/dist/web-vitals.iife.js';
+                s.onload = function() {
+                    var wv = webVitals;
+                    function record(m) { window.__cwv[m.name.toLowerCase()] = m.value; }
+                    wv.onLCP(record);
+                    wv.onCLS(record);
+                    wv.onFCP(record);
+                    wv.onTTFB(record);
+                    wv.onINP(record);
+                };
+                document.head.appendChild(s);
+            })();
+        """.strip().replace("\n", " ")
+
+        proc = await asyncio.create_subprocess_exec(
+            "agent-browser", "eval", inject_js,
+            stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+        )
+        await asyncio.wait_for(proc.communicate(), timeout=10)
+
+        # Allow time for metrics to fire (LCP needs page to be "loaded")
+        await asyncio.sleep(3)
+
+        # Write collected metrics to document.title so we can read them back
+        flush_js = "document.title = JSON.stringify(window.__cwv || {});"
+        proc = await asyncio.create_subprocess_exec(
+            "agent-browser", "eval", flush_js,
+            stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+        )
+        await asyncio.wait_for(proc.communicate(), timeout=5)
+
+        # Read title
+        proc = await asyncio.create_subprocess_exec(
+            "agent-browser", "get", "title",
+            stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+        )
+        stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=10)
+        raw = stdout.decode().strip()
+
+        # agent-browser returns double-encoded JSON strings
+        try:
+            decoded = json.loads(raw)
+            if isinstance(decoded, str):
+                decoded = json.loads(decoded)
+        except (json.JSONDecodeError, TypeError):
+            decoded = {}
+
+        return _build_cwv_result(decoded)
+
+    except asyncio.TimeoutError:
+        return {"error": "Core Web Vitals collection timed out"}
+    except Exception as e:
+        return {"error": f"Core Web Vitals failed: {e}"}
+
+
+def _build_cwv_result(raw_metrics: dict[str, Any]) -> dict[str, Any]:
+    """Transform raw web-vitals values into the structured output format."""
+    result: dict[str, Any] = {}
+    ratings: list[str] = []
+
+    for metric in ("lcp", "cls", "fcp", "ttfb", "inp"):
+        raw_val = raw_metrics.get(metric)
+        if raw_val is not None:
+            # web-vitals reports LCP/FCP/TTFB in ms, CLS unitless, INP in ms
+            if metric in ("lcp", "fcp", "ttfb", "inp"):
+                value = round(raw_val / 1000, 3)  # ms -> seconds
+            else:
+                value = round(raw_val, 4)
+        else:
+            value = None
+
+        rating = _rate(metric, value)
+        result[metric] = {"value": value, "rating": rating}
+        ratings.append(rating)
+
+    result["score"] = _cwv_score(ratings)
+    return result
+
+
+# ---------------------------------------------------------------------------
+# Lighthouse
+# ---------------------------------------------------------------------------
 
 async def run_lighthouse(url: str) -> dict[str, Any] | None:
     """Run Lighthouse and return category scores."""
     if not shutil.which("npx"):
         return {"error": "npx not found — skipping Lighthouse"}
+
+    print("  Running Lighthouse...", flush=True)
 
     with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as f:
         output_path = f.name
@@ -73,115 +223,15 @@ async def run_lighthouse(url: str) -> dict[str, Any] | None:
         Path(output_path).unlink(missing_ok=True)
 
 
-async def run_axe(url: str) -> dict[str, Any] | None:
-    """Run axe accessibility scan via agent-browser's built-in Chrome.
-
-    Uses agent-browser to inject axe-core into the page and run it,
-    avoiding the ChromeDriver version mismatch issue with @axe-core/cli.
-    Falls back to npx @axe-core/cli if agent-browser is unavailable.
-    """
-    # Strategy 1: Use agent-browser to inject and run axe-core directly
-    if shutil.which("agent-browser"):
-        try:
-            # Inject axe-core from CDN and run it
-            axe_script = (
-                "const script = document.createElement('script');"
-                "script.src = 'https://cdnjs.cloudflare.com/ajax/libs/axe-core/4.10.2/axe.min.js';"
-                "script.onload = () => {"
-                "  axe.run().then(r => {"
-                "    document.title = JSON.stringify({violations: r.violations.length, "
-                "      passes: r.passes.length, incomplete: r.incomplete.length, "
-                "      details: r.violations.slice(0, 20).map(v => ({id: v.id, impact: v.impact, "
-                "        description: v.description, nodes: v.nodes.length}))});"
-                "  });"
-                "};"
-                "document.head.appendChild(script);"
-            )
-
-            # Open page and inject axe
-            proc = await asyncio.create_subprocess_exec(
-                "agent-browser", "open", url,
-                stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
-            )
-            await asyncio.wait_for(proc.communicate(), timeout=15)
-
-            proc = await asyncio.create_subprocess_exec(
-                "agent-browser", "eval", axe_script,
-                stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
-            )
-            await asyncio.wait_for(proc.communicate(), timeout=10)
-
-            # Wait for axe to complete
-            await asyncio.sleep(5)
-
-            # Read results from document.title
-            proc = await asyncio.create_subprocess_exec(
-                "agent-browser", "get", "title",
-                stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
-            )
-            stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=10)
-            title = stdout.decode().strip()
-
-            try:
-                data = json.loads(title)
-                return {
-                    "violations_count": data.get("violations", 0),
-                    "passes_count": data.get("passes", 0),
-                    "incomplete_count": data.get("incomplete", 0),
-                    "violations": data.get("details", []),
-                }
-            except (json.JSONDecodeError, TypeError):
-                return {"note": "axe-core injection ran but results not parseable"}
-
-        except (asyncio.TimeoutError, Exception) as e:
-            return {"error": f"axe via agent-browser failed: {e}"}
-
-    # Strategy 2: Fall back to npx @axe-core/cli
-    if not shutil.which("npx"):
-        return {"error": "Neither agent-browser nor npx available — skipping axe"}
-
-    try:
-        proc = await asyncio.create_subprocess_exec(
-            "npx", "--yes", "@axe-core/cli", url, "--stdout",
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
-        stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=60)
-        output = stdout.decode()
-
-        try:
-            results = json.loads(output)
-            if isinstance(results, list) and results:
-                page = results[0]
-                violations = page.get("violations", [])
-                return {
-                    "violations_count": len(violations),
-                    "violations": [
-                        {
-                            "id": v["id"],
-                            "impact": v.get("impact", "unknown"),
-                            "description": v.get("description", ""),
-                            "nodes_affected": len(v.get("nodes", [])),
-                        }
-                        for v in violations[:20]
-                    ],
-                    "passes_count": len(page.get("passes", [])),
-                    "incomplete_count": len(page.get("incomplete", [])),
-                }
-        except json.JSONDecodeError:
-            pass
-
-        return {"raw_output": output[:2000]}
-
-    except asyncio.TimeoutError:
-        return {"error": "axe timed out after 60s"}
-    except Exception as e:
-        return {"error": f"axe failed: {e}"}
-
+# ---------------------------------------------------------------------------
+# CSS analysis
+# ---------------------------------------------------------------------------
 
 async def analyze_css(url: str) -> dict[str, Any] | None:
     """Fetch page and analyze CSS statistics."""
     try:
+        print("  Analyzing CSS...", flush=True)
+
         proc = await asyncio.create_subprocess_exec(
             "curl", "-sL", "--max-time", "15", url,
             stdout=asyncio.subprocess.PIPE,
@@ -199,25 +249,18 @@ async def analyze_css(url: str) -> dict[str, Any] | None:
             r'<link[^>]+rel=["\']stylesheet["\'][^>]+href=["\']([^"\']+)["\']',
             html, re.IGNORECASE,
         )
-        # Also match href before rel
         link_hrefs += re.findall(
             r'<link[^>]+href=["\']([^"\']+)["\'][^>]+rel=["\']stylesheet["\']',
             html, re.IGNORECASE,
         )
 
-        for href in link_hrefs[:10]:  # cap at 10 stylesheets
-            if href.startswith("//"):
-                href = "https:" + href
-            elif href.startswith("/"):
-                from urllib.parse import urlparse
-                parsed = urlparse(url)
-                href = f"{parsed.scheme}://{parsed.netloc}{href}"
-            elif not href.startswith("http"):
+        for href in link_hrefs[:10]:
+            resolved = _resolve_css_href(href, url)
+            if resolved is None:
                 continue
-
             try:
                 css_proc = await asyncio.create_subprocess_exec(
-                    "curl", "-sL", "--max-time", "10", href,
+                    "curl", "-sL", "--max-time", "10", resolved,
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.PIPE,
                 )
@@ -229,33 +272,57 @@ async def analyze_css(url: str) -> dict[str, Any] | None:
         if not all_css.strip():
             return {"note": "No CSS found (may be using CSS-in-JS)"}
 
-        # Analyze
+        # Core stats
         colors = set(re.findall(r"#[0-9a-fA-F]{3,8}\b", all_css))
-        rgb_colors = re.findall(r"rgba?\([^)]+\)", all_css)
-        hsl_colors = re.findall(r"hsla?\([^)]+\)", all_css)
         font_families = set(re.findall(r"font-family:\s*([^;}{]+)", all_css, re.IGNORECASE))
         font_sizes = re.findall(r"font-size:\s*([^;}{]+)", all_css, re.IGNORECASE)
         important_count = all_css.count("!important")
         selectors = re.findall(r"[^{}]+(?=\s*\{)", all_css)
         media_queries = re.findall(r"@media\s+[^{]+", all_css)
 
+        # Unit analysis — px vs rem/em across all numeric declarations
+        px_count = len(re.findall(r":\s*[^;{}]*[\d.]+px", all_css, re.IGNORECASE))
+        rem_count = len(re.findall(r":\s*[^;{}]*[\d.]+rem", all_css, re.IGNORECASE))
+        em_count = len(re.findall(r":\s*[^;{}]*[\d.]+em(?!s)", all_css, re.IGNORECASE))
+        total_units = px_count + rem_count + em_count
+        px_ratio = round(px_count / total_units, 2) if total_units > 0 else 0.0
+
         return {
             "total_css_bytes": len(all_css),
             "selector_count": len(selectors),
             "unique_hex_colors": len(colors),
             "hex_colors_sample": sorted(colors)[:20],
-            "rgb_color_count": len(set(rgb_colors)),
-            "hsl_color_count": len(set(hsl_colors)),
             "font_families": [f.strip().strip("'\"") for f in font_families][:10],
             "unique_font_sizes": len(set(s.strip() for s in font_sizes)),
-            "font_sizes_sample": sorted(set(s.strip() for s in font_sizes))[:15],
             "important_count": important_count,
             "media_query_count": len(media_queries),
+            "unit_analysis": {
+                "px_count": px_count,
+                "rem_count": rem_count,
+                "em_count": em_count,
+                "px_ratio": px_ratio,
+            },
         }
 
     except Exception as e:
         return {"error": f"CSS analysis failed: {e}"}
 
+
+def _resolve_css_href(href: str, base_url: str) -> str | None:
+    """Resolve a stylesheet href to an absolute URL."""
+    if href.startswith("//"):
+        return "https:" + href
+    if href.startswith("/"):
+        parsed = urlparse(base_url)
+        return f"{parsed.scheme}://{parsed.netloc}{href}"
+    if href.startswith("http"):
+        return href
+    return None
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
 
 def _score(category: dict | None) -> float | None:
     """Extract score (0-100) from a Lighthouse category."""
