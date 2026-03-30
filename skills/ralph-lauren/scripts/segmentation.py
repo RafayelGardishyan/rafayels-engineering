@@ -216,6 +216,26 @@ def _draw_overlay(
     return Image.alpha_composite(base, overlay).convert("RGB")
 
 
+def _infer_scroll_position(screenshot_path: Path) -> int | None:
+    """Infer the scroll position from a screenshot filename.
+
+    Convention from ralph_lauren.py:
+      screenshot-0.png → scroll 0
+      screenshot-1.png → scroll 800
+      screenshot-2.png → scroll 1600
+      screenshot-3.png → scroll 2400
+      screenshot-footer.png → document.body.scrollHeight (use -1 sentinel)
+    """
+    name = screenshot_path.stem
+    # screenshot-0, screenshot-1, etc.
+    if name.startswith("screenshot-") and name[-1].isdigit():
+        idx = int(name.split("-")[-1])
+        return idx * 800
+    if "footer" in name:
+        return -1  # sentinel for scrollHeight
+    return 0  # default to top
+
+
 async def generate_segmentation(
     screenshot_path: str | Path,
     output_path: str | Path,
@@ -223,7 +243,8 @@ async def generate_segmentation(
 ) -> bool:
     """Generate a DOM-based segmentation map for a screenshot.
 
-    Requires agent-browser to be open on the page already (or url provided).
+    Scrolls agent-browser to match the screenshot's viewport position
+    before extracting element bounding boxes.
 
     Args:
         screenshot_path: Path to the screenshot PNG.
@@ -255,7 +276,20 @@ async def generate_segmentation(
             )
             await asyncio.wait_for(proc.communicate(), timeout=15)
 
-        # Extract element bounding boxes via JS
+        # Scroll to match this screenshot's viewport position
+        scroll_y = _infer_scroll_position(screenshot_path)
+        if scroll_y == -1:
+            scroll_cmd = "window.scrollTo(0, document.body.scrollHeight)"
+        else:
+            scroll_cmd = f"window.scrollTo(0, {scroll_y})"
+        proc = await asyncio.create_subprocess_exec(
+            "agent-browser", "eval", scroll_cmd,
+            stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+        )
+        await asyncio.wait_for(proc.communicate(), timeout=5)
+        await asyncio.sleep(0.5)  # let scroll animations settle
+
+        # Extract element bounding boxes via JS (positions are relative to viewport)
         proc = await asyncio.create_subprocess_exec(
             "agent-browser", "eval", EXTRACT_ELEMENTS_JS,
             stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
@@ -314,9 +348,13 @@ async def generate_segmentation(
 
 async def generate_segmentation_for_dir(screenshot_dir: Path, url: str | None = None) -> None:
     """Generate segmentation maps for all screenshots in a directory."""
+    # Open the URL once, then scroll for each screenshot
+    opened = False
     for png in sorted(screenshot_dir.glob("screenshot*.png")):
-        if "segmentation" in png.name:
+        if "segmentation" in png.name or "after" in png.name:
             continue
         seg_path = png.with_name(png.stem + "-segmentation" + png.suffix)
         if not seg_path.exists():
-            await generate_segmentation(png, seg_path, url=url)
+            # Only pass url on first call to avoid reopening
+            await generate_segmentation(png, seg_path, url=url if not opened else None)
+            opened = True
