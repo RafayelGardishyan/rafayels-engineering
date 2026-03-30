@@ -267,17 +267,30 @@ async def run() -> None:
         # Step 1: Deterministic metrics
         metrics = {}
         if not skip_deterministic:
-            _print(f"\n  [1/5] Collecting deterministic metrics...")
+            _print(f"\n  [1/6] Collecting deterministic metrics...")
             metrics = await collect_metrics(url)
             (iter_dir / "metrics.json").write_text(json.dumps(metrics, indent=2))
             _print_metrics_summary(metrics)
         else:
-            _print(f"\n  [1/5] Skipping deterministic metrics (--skip-deterministic)")
+            _print(f"\n  [1/6] Skipping deterministic metrics (--skip-deterministic)")
 
-        # Step 2: Subjective assessment (independent Claude session)
-        _print(f"\n  [2/5] Running subjective assessment (with hover testing)...")
-        screenshot_path = str(iter_dir / "screenshot.png")
-        assessment = await assess(url, cwd, metrics, screenshot_path)
+        # Step 2: Take screenshots (before assessment so segmentation can run)
+        _print(f"\n  [2/6] Taking viewport screenshots...")
+        await take_screenshot(url, iter_dir / "screenshot.png")
+
+        # Step 3: Generate segmentation maps BEFORE assessment
+        _print(f"\n  [3/6] Generating segmentation maps...")
+        await generate_segmentation_for_dir(iter_dir)
+        segmentation_paths = sorted(iter_dir.glob("*-segmentation.png"))
+        _print(f"         Generated {len(segmentation_paths)} segmentation maps")
+
+        # Step 4: Subjective assessment — receives segmentation map paths
+        _print(f"\n  [4/6] Running subjective assessment (with hover + link testing)...")
+        assessment = await assess(
+            url, cwd, metrics,
+            screenshot_path=str(iter_dir / "screenshot.png"),
+            segmentation_paths=[str(p) for p in segmentation_paths],
+        )
         (iter_dir / "assessment.json").write_text(json.dumps(assessment, indent=2))
 
         overall = assessment.get("scores", {}).get("overall", 0)
@@ -289,29 +302,19 @@ async def run() -> None:
 
         _print_assessment_summary(assessment)
 
-        # Step 2b: Generate segmentation maps for all screenshots
-        _print(f"\n  [2b/5] Generating segmentation maps...")
-        await generate_segmentation_for_dir(iter_dir)
-
-        # Step 3: Check if target reached
+        # Step 5: Check if target reached
         if overall >= target:
             _print(f"\n  Target score {target} reached with {overall}! Stopping.")
-            _print(f"\n  [3/5] Taking final screenshot...")
-            await take_screenshot(url, iter_dir / "screenshot-final.png")
-            await generate_segmentation_for_dir(iter_dir)
             break
 
-        # Step 4: Run improvement (independent Claude session)
-        _print(f"\n  [3/5] Running improvement session...")
+        # Step 5: Run improvement (independent Claude session)
+        _print(f"\n  [5/6] Running improvement session...")
         changes = await improve(url, cwd, assessment, i)
         (iter_dir / "changes.md").write_text(f"# Iteration {i} Changes\n\n{changes}")
 
-        # Step 5: Post-improvement screenshots + segmentation
-        _print(f"\n  [4/5] Taking post-improvement screenshots...")
+        # Step 6: Post-improvement screenshots
+        _print(f"\n  [6/6] Taking post-improvement screenshots...")
         await take_screenshot(url, iter_dir / "screenshot-after.png")
-
-        _print(f"\n  [5/5] Generating post-improvement segmentation maps...")
-        await generate_segmentation_for_dir(iter_dir)
 
     # Write summary
     write_summary(run_dir, scores_history, url, target)

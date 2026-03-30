@@ -25,6 +25,7 @@ async def assess(
     cwd: str,
     deterministic_metrics: dict[str, Any],
     screenshot_path: str | None = None,
+    segmentation_paths: list[str] | None = None,
 ) -> dict[str, Any]:
     """Run subjective design assessment in a separate Claude session.
 
@@ -33,6 +34,7 @@ async def assess(
         cwd: Project working directory.
         deterministic_metrics: Results from metrics.py.
         screenshot_path: If provided, save the screenshot here.
+        segmentation_paths: Paths to pre-generated segmentation maps.
 
     Returns:
         Parsed assessment dict with scores, findings, and summary.
@@ -43,6 +45,27 @@ async def assess(
     screenshot_instruction = ""
     if screenshot_path:
         screenshot_instruction = f"\nSave the full-page screenshot to: {screenshot_path}"
+
+    # Build segmentation context
+    segmentation_context = ""
+    if segmentation_paths:
+        seg_list = "\n".join(f"   - {p}" for p in segmentation_paths)
+        segmentation_context = f"""
+
+## Pre-Generated Segmentation Maps
+
+Segmentation maps have been generated for the screenshots using Gemini Vision.
+These color-coded overlays identify UI regions, components, spacing, and visual hierarchy.
+
+IMPORTANT: You MUST examine these segmentation maps by reading them as images.
+They are critical for your assessment — they reveal layout structure, spacing
+inconsistencies, and component boundaries that may not be obvious from screenshots alone.
+
+Segmentation map files:
+{seg_list}
+
+Use the Read tool to view each segmentation map image, then reference what you
+see in your scoring and findings."""
 
     system_prompt = f"""You are an expert frontend design assessor performing a thorough, critical evaluation.
 You combine the methodologies of two professional design assessment frameworks:
@@ -87,6 +110,8 @@ Then test with persona archetypes:
 
 Assess cognitive load: Is information density appropriate? Too dense? Too sparse?
 
+{segmentation_context}
+
 ## Phase 3: Detailed Dimension Scoring
 
 {rubric}
@@ -123,7 +148,14 @@ Follow this protocol exactly:
 3. Run: agent-browser snapshot -i
 4. Examine ALL screenshots to see every section as a real user would (including scroll-triggered animations)
 
-**Step 1b: Link Validation**
+**Step 1b: Examine Segmentation Maps**
+If segmentation maps were provided (listed in the system prompt above), you MUST:
+1. Use the Read tool to view each segmentation map image file
+2. Analyze what the segmentation reveals about layout structure, spacing consistency, component boundaries
+3. Note any spacing irregularities, misaligned regions, or structural issues visible in the segmentation
+4. Reference segmentation findings in your dimension scores (especially Layout and Craft)
+
+**Step 1c: Link Validation**
 Check EVERY link on the page:
 1. Run: agent-browser snapshot -i --json (to get all interactive elements with refs)
 2. For each link element, run: agent-browser get attr href @eN
@@ -132,7 +164,7 @@ Check EVERY link on the page:
 5. Report ALL broken links (404, 500), redirect chains, and placeholder '#' links as P0/P1 findings
 6. Include a "links" section in the JSON output listing every link, its href, and its status (working/broken/redirect/placeholder)
 
-**Step 1c: Hover State Assessment**
+**Step 1d: Hover State Assessment**
 Test hover states on ALL interactive elements:
 1. From the snapshot refs, identify all buttons, links, cards, and interactive elements
 2. For each distinct interactive element TYPE (not every instance — pick one representative):
@@ -239,11 +271,11 @@ Remember: be CRITICAL, not encouraging. Most sites score 40-65. A score of 85+ m
             cwd=cwd,
             allowed_tools=["Read", "Bash", "Glob", "Grep"],
             permission_mode="default",
-            max_turns=30,
+            max_turns=60,
         ),
     ):
         if isinstance(message, ResultMessage):
-            result_text = message.result
+            result_text = message.result or ""
 
     return _parse_assessment(result_text)
 
@@ -259,27 +291,51 @@ def _read_philosophy(cwd: str) -> str | None:
     return content
 
 
-def _parse_assessment(text: str) -> dict[str, Any]:
+def _parse_assessment(text: str | None) -> dict[str, Any]:
     """Extract JSON assessment from Claude's response."""
-    # Try to find a JSON code block
-    json_match = re.search(r"```(?:json)?\s*\n({.*?})\s*\n```", text, re.DOTALL)
+    if not text:
+        return {
+            "scores": {
+                "heuristics": 0, "typography": 0, "layout": 0,
+                "color": 0, "craft": 0, "originality": 0, "overall": 0,
+            },
+            "findings": [],
+            "summary": "Assessment session returned no output — may have timed out or errored",
+            "_parse_error": True,
+        }
+
+    # Strategy 1: JSON code block — use GREEDY match to capture the full block
+    json_match = re.search(r"```(?:json)?\s*\n(\{.+\})\s*\n```", text, re.DOTALL)
     if json_match:
         try:
             return json.loads(json_match.group(1))
         except json.JSONDecodeError:
             pass
 
-    # Try to find any JSON object with "scores" key
-    json_match = re.search(r'(\{[^{}]*"scores"[^{}]*\{[^}]*\}[^}]*\})', text, re.DOTALL)
-    if json_match:
-        try:
-            return json.loads(json_match.group(1))
-        except json.JSONDecodeError:
-            pass
+    # Strategy 2: Bracket-counting extraction from first { containing "scores"
+    start = -1
+    for i, ch in enumerate(text):
+        if ch == '{' and '"scores"' in text[i:i+500]:
+            start = i
+            break
 
-    # Last resort: try to parse the entire response as JSON
+    if start >= 0:
+        depth = 0
+        for i in range(start, len(text)):
+            if text[i] == '{':
+                depth += 1
+            elif text[i] == '}':
+                depth -= 1
+                if depth == 0:
+                    try:
+                        return json.loads(text[start:i + 1])
+                    except json.JSONDecodeError:
+                        pass
+                    break
+
+    # Strategy 3: Try the entire response as JSON
     try:
-        return json.loads(text)
+        return json.loads(text.strip())
     except (json.JSONDecodeError, TypeError):
         pass
 
@@ -291,7 +347,7 @@ def _parse_assessment(text: str) -> dict[str, Any]:
         },
         "findings": [],
         "summary": f"Failed to parse assessment. Raw response length: {len(text)} chars",
-        "_raw": text[:3000],
+        "_raw": text,
         "_parse_error": True,
     }
 
