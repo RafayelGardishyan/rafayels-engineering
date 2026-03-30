@@ -71,8 +71,8 @@ Examples:
         help="Skip Lighthouse/axe metrics (faster, subjective-only)",
     )
     parser.add_argument(
-        "--gemini-key", default=None,
-        help="Gemini API key for segmentation maps (or set GEMINI_API_KEY env var)",
+        "--focus", default=None,
+        help="Focus point for assessment and improvement (e.g., 'Fix spacing and overlap issues')",
     )
     return parser.parse_args()
 
@@ -225,19 +225,15 @@ async def run() -> None:
     max_iters = args.max_iterations
     target = args.target_score
     skip_deterministic = args.skip_deterministic
-
-    # Set Gemini key if provided via CLI
-    if args.gemini_key:
-        os.environ["GEMINI_API_KEY"] = args.gemini_key
+    focus = args.focus
 
     # Check dependencies
     warnings = check_dependencies()
     for w in warnings:
         _print(f"  [warn] {w}")
 
-    if not os.environ.get("GEMINI_API_KEY"):
-        _print("  [info] No GEMINI_API_KEY — segmentation maps will be skipped")
-
+    if focus:
+        _print(f"  Focus:          {focus}")
     print_banner(url, max_iters, target)
 
     # Setup output directory
@@ -255,41 +251,51 @@ async def run() -> None:
         )
 
     scores_history = []
+    previous_changes = None
+    previous_scores = None
 
     for i in range(1, max_iters + 1):
         iter_dir = run_dir / f"iteration-{i}"
         iter_dir.mkdir(exist_ok=True)
+        is_followup = i > 1
 
         _print(f"\n{'='*60}")
-        _print(f"  ITERATION {i}/{max_iters}")
+        _print(f"  ITERATION {i}/{max_iters}{'  (follow-up — faster protocol)' if is_followup else ''}")
         _print(f"{'='*60}")
 
-        # Step 1: Deterministic metrics
+        # Step 1: Deterministic metrics (skip on follow-ups — they don't change much)
         metrics = {}
-        if not skip_deterministic:
+        if not skip_deterministic and not is_followup:
             _print(f"\n  [1/6] Collecting deterministic metrics...")
             metrics = await collect_metrics(url)
             (iter_dir / "metrics.json").write_text(json.dumps(metrics, indent=2))
             _print_metrics_summary(metrics)
         else:
-            _print(f"\n  [1/6] Skipping deterministic metrics (--skip-deterministic)")
+            _print(f"\n  [1/6] Skipping deterministic metrics {'(follow-up)' if is_followup else '(--skip-deterministic)'}")
 
-        # Step 2: Take screenshots (before assessment so segmentation can run)
+        # Step 2: Take screenshots
         _print(f"\n  [2/6] Taking viewport screenshots...")
         await take_screenshot(url, iter_dir / "screenshot.png")
 
-        # Step 3: Generate segmentation maps BEFORE assessment
+        # Step 3: Generate segmentation maps
         _print(f"\n  [3/6] Generating segmentation maps...")
         await generate_segmentation_for_dir(iter_dir)
         segmentation_paths = sorted(iter_dir.glob("*-segmentation.png"))
         _print(f"         Generated {len(segmentation_paths)} segmentation maps")
 
-        # Step 4: Subjective assessment — receives segmentation map paths
-        _print(f"\n  [4/6] Running subjective assessment (with hover + link testing)...")
+        # Step 4: Subjective assessment — with previous iteration context
+        if is_followup:
+            _print(f"\n  [4/6] Running follow-up assessment (reviewing previous changes)...")
+        else:
+            _print(f"\n  [4/6] Running full assessment (hover + link testing)...")
         assessment = await assess(
             url, cwd, metrics,
             screenshot_path=str(iter_dir / "screenshot.png"),
             segmentation_paths=[str(p) for p in segmentation_paths],
+            iteration=i,
+            previous_changes=previous_changes,
+            previous_scores=previous_scores,
+            focus=focus,
         )
         (iter_dir / "assessment.json").write_text(json.dumps(assessment, indent=2))
 
@@ -309,8 +315,12 @@ async def run() -> None:
 
         # Step 5: Run improvement (independent Claude session)
         _print(f"\n  [5/6] Running improvement session...")
-        changes = await improve(url, cwd, assessment, i)
+        changes = await improve(url, cwd, assessment, i, focus=focus)
         (iter_dir / "changes.md").write_text(f"# Iteration {i} Changes\n\n{changes}")
+
+        # Save context for next iteration
+        previous_changes = changes
+        previous_scores = assessment.get("scores", {})
 
         # Step 6: Post-improvement screenshots
         _print(f"\n  [6/6] Taking post-improvement screenshots...")

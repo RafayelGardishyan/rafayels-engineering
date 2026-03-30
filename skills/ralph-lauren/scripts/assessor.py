@@ -26,6 +26,10 @@ async def assess(
     deterministic_metrics: dict[str, Any],
     screenshot_path: str | None = None,
     segmentation_paths: list[str] | None = None,
+    iteration: int = 1,
+    previous_changes: str | None = None,
+    previous_scores: dict[str, Any] | None = None,
+    focus: str | None = None,
 ) -> dict[str, Any]:
     """Run subjective design assessment in a separate Claude session.
 
@@ -35,10 +39,26 @@ async def assess(
         deterministic_metrics: Results from metrics.py.
         screenshot_path: If provided, save the screenshot here.
         segmentation_paths: Paths to pre-generated segmentation maps.
+        iteration: Current iteration number (1-based). Iterations 2+ use a faster protocol.
+        previous_changes: Changes.md content from the previous iteration.
+        previous_scores: Previous iteration's scores dict for comparison.
+        focus: Optional focus point to emphasize in assessment.
 
     Returns:
         Parsed assessment dict with scores, findings, and summary.
     """
+    is_followup = iteration > 1
+    focus_context = ""
+    if focus:
+        focus_context = f"""
+
+## USER FOCUS POINT (PRIORITY)
+
+The user has asked to focus on: **{focus}**
+
+This is your TOP PRIORITY. Score and evaluate this specific concern first,
+then do the general assessment. Findings related to this focus should be
+weighted more heavily and listed first."""
     rubric = RUBRIC_PATH.read_text()
     philosophy = _read_philosophy(cwd)
     metrics_json = json.dumps(deterministic_metrics, indent=2)
@@ -54,7 +74,7 @@ async def assess(
 
 ## Pre-Generated Segmentation Maps
 
-Segmentation maps have been generated for the screenshots using Gemini Vision.
+Segmentation maps have been generated for the screenshots using MobileSAM.
 These color-coded overlays identify UI regions, components, spacing, and visual hierarchy.
 
 IMPORTANT: You MUST examine these segmentation maps by reading them as images.
@@ -67,11 +87,33 @@ Segmentation map files:
 Use the Read tool to view each segmentation map image, then reference what you
 see in your scoring and findings."""
 
+    # Build previous iteration context
+    prev_context = ""
+    if is_followup and previous_changes:
+        prev_scores_str = ""
+        if previous_scores:
+            prev_scores_str = f"""Previous scores: {json.dumps(previous_scores)}
+Focus your assessment on dimensions that scored LOWEST — those need the most attention."""
+        prev_context = f"""
+
+## Previous Iteration Context
+
+This is iteration {iteration}. The previous iteration made these changes:
+
+{previous_changes}
+
+{prev_scores_str}
+
+IMPORTANT: Evaluate whether the previous changes ACTUALLY improved things.
+If they made things worse, say so explicitly. If they helped, acknowledge it."""
+
     system_prompt = f"""You are an expert frontend design assessor performing a thorough, critical evaluation.
 You combine the methodologies of two professional design assessment frameworks:
 
 Your job is to assess the design quality of a web page — NOT to fix anything.
 You MUST be honest and critical. Do not inflate scores.
+{focus_context}
+{"This is a FOLLOW-UP assessment (iteration " + str(iteration) + "). Be faster — skip full link validation and hover testing. Focus on re-scoring dimensions and evaluating whether previous changes helped." if is_followup else ""}
 
 ## Phase 1: /audit — Technical Quality Audit (impeccable.style)
 
@@ -126,9 +168,29 @@ These are objective measurements. Use them to inform your subjective assessment:
 
 ```json
 {metrics_json}
-```"""
+```
+{prev_context}"""
 
-    prompt = f"""Assess the frontend design at: {url}
+    # Build the prompt — follow-up iterations are shorter
+    if is_followup:
+        prompt = f"""Assess the frontend design at: {url} (FOLLOW-UP iteration {iteration})
+
+**Shortened Protocol — focus on re-scoring, not full exploration:**
+
+1. Run: agent-browser open {url}
+2. Take 2-3 viewport screenshots (hero + one scroll position)
+   {screenshot_instruction}
+3. Examine the segmentation maps if provided (Read tool)
+4. Re-score ALL 6 dimensions (0-100) — compare against previous scores
+5. Evaluate whether the previous iteration's changes improved things
+6. List only NEW findings or findings that got WORSE
+7. Skip full link validation (only check if previously-broken links were fixed)
+8. Skip full hover testing (only check if previously-missing hover states were added)
+
+Output the JSON assessment in the same format as before.
+Be CRITICAL. If changes made things worse, the score should go DOWN."""
+    else:
+        prompt = f"""Assess the frontend design at: {url}
 
 Follow this protocol exactly:
 
@@ -271,7 +333,7 @@ Remember: be CRITICAL, not encouraging. Most sites score 40-65. A score of 85+ m
             cwd=cwd,
             allowed_tools=["Read", "Bash", "Glob", "Grep"],
             permission_mode="default",
-            max_turns=60,
+            max_turns=30 if is_followup else 50,
         ),
     ):
         if isinstance(message, ResultMessage):

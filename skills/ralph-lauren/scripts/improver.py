@@ -20,6 +20,7 @@ async def improve(
     cwd: str,
     assessment: dict[str, Any],
     iteration: int,
+    focus: str | None = None,
 ) -> str:
     """Run design improvement in a separate Claude session.
 
@@ -28,6 +29,7 @@ async def improve(
         cwd: Project working directory (where code lives).
         assessment: The assessment dict from assessor.py.
         iteration: Current iteration number.
+        focus: Optional focus point from the user.
 
     Returns:
         Summary of changes made (text).
@@ -45,6 +47,13 @@ You apply the impeccable.style methodology: each fix maps to a specific design s
 
 Fix the issues identified in the assessment, prioritized by severity (P0 first).
 Make surgical, targeted changes — do not rewrite entire files.
+{f"""
+## USER FOCUS POINT (TOP PRIORITY)
+
+The user specifically wants you to focus on: **{focus}**
+
+Address this FIRST, before other findings. Even if the assessment doesn't mention it,
+inspect the page for this specific concern and fix any issues you find.""" if focus else ""}
 
 ## Design System Philosophy
 
@@ -206,7 +215,7 @@ fix the most impactful issues within a reasonable scope."""
             cwd=cwd,
             allowed_tools=["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
             permission_mode="acceptEdits",
-            max_turns=50,
+            max_turns=35,
         ),
     ):
         if isinstance(message, ResultMessage):
