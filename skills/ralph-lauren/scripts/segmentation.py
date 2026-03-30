@@ -1,135 +1,234 @@
-"""Generate segmentation maps for screenshots using MobileSAM.
+"""Generate UI segmentation maps from DOM element bounding boxes.
 
-Uses Meta's Segment Anything Model (MobileSAM variant) to produce
-color-coded segmentation overlays of UI screenshots. Runs locally,
-no API key needed, CPU-friendly (~40MB model).
+Uses agent-browser to extract actual DOM element positions and roles,
+then draws color-coded overlays with labels using Pillow. No ML model
+needed — this is fast, free, deterministic, and semantically correct.
 """
 
 from __future__ import annotations
 
 import asyncio
-import urllib.request
+import json
+import shutil
 from pathlib import Path
 
-import numpy as np
-
 try:
-    from PIL import Image
+    from PIL import Image, ImageDraw, ImageFont
     HAS_PIL = True
 except ImportError:
     HAS_PIL = False
 
-try:
-    import torch
-    from mobile_sam import SamAutomaticMaskGenerator, sam_model_registry
-    HAS_SAM = True
-except ImportError:
-    HAS_SAM = False
+
+# Map HTML tags/roles to colors and labels
+ELEMENT_COLORS = {
+    # Navigation
+    "nav": (66, 133, 244, 80),       # blue
+    "header": (66, 133, 244, 60),
+    # Sections
+    "section": (171, 71, 188, 50),   # purple
+    "main": (171, 71, 188, 30),
+    "article": (171, 71, 188, 50),
+    # Interactive
+    "button": (234, 67, 53, 100),    # red
+    "a": (255, 112, 67, 70),         # orange
+    "input": (233, 30, 99, 90),      # pink
+    "textarea": (233, 30, 99, 90),
+    "select": (233, 30, 99, 90),
+    "form": (233, 30, 99, 50),
+    # Content
+    "h1": (52, 168, 83, 70),         # green
+    "h2": (52, 168, 83, 60),
+    "h3": (52, 168, 83, 50),
+    "h4": (52, 168, 83, 40),
+    "p": (139, 195, 74, 35),         # light green
+    "ul": (139, 195, 74, 30),
+    "ol": (139, 195, 74, 30),
+    "li": (139, 195, 74, 25),
+    # Media
+    "img": (251, 188, 4, 80),        # yellow
+    "svg": (251, 188, 4, 60),
+    "video": (251, 188, 4, 80),
+    "canvas": (251, 188, 4, 60),
+    # Cards / containers
+    "div": (0, 172, 193, 20),        # cyan (very light — divs are everywhere)
+    # Footer
+    "footer": (158, 158, 158, 60),   # gray
+    # Code
+    "pre": (96, 125, 139, 60),       # blue-gray
+    "code": (96, 125, 139, 50),
+    # Semantic
+    "aside": (121, 85, 72, 50),      # brown
+    "dialog": (244, 67, 54, 80),     # deep red
+    "details": (0, 150, 136, 50),    # teal
+}
+
+# JS to extract all visible element bounding boxes
+EXTRACT_ELEMENTS_JS = """
+(() => {
+    const results = [];
+    const seen = new Set();
+    // Target meaningful elements, skip generic wrappers
+    const selectors = [
+        'nav', 'header', 'footer', 'main', 'section', 'article', 'aside',
+        'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+        'p', 'a[href]', 'button', 'input', 'textarea', 'select', 'form',
+        'img', 'svg', 'video', 'canvas',
+        'ul', 'ol',
+        'pre', 'code',
+        'dialog', 'details',
+        // Common UI patterns via class/role
+        '[role="navigation"]', '[role="banner"]', '[role="main"]',
+        '[role="complementary"]', '[role="contentinfo"]',
+        '[role="button"]', '[role="link"]', '[role="listbox"]',
+        // Cards and containers with meaningful classes
+        '[class*="card"]', '[class*="Card"]',
+        '[class*="hero"]', '[class*="Hero"]',
+        '[class*="grid"]', '[class*="Grid"]',
+        '[class*="modal"]', '[class*="Modal"]',
+        '[class*="feature"]', '[class*="Feature"]',
+        '[class*="pipeline"]', '[class*="Pipeline"]',
+        '[class*="agent"]', '[class*="Agent"]',
+    ];
+    for (const sel of selectors) {
+        try {
+            for (const el of document.querySelectorAll(sel)) {
+                if (seen.has(el)) continue;
+                seen.add(el);
+                const rect = el.getBoundingClientRect();
+                // Skip invisible or tiny elements
+                if (rect.width < 5 || rect.height < 5) continue;
+                if (rect.bottom < 0 || rect.top > window.innerHeight) continue;
+                const tag = el.tagName.toLowerCase();
+                const role = el.getAttribute('role') || '';
+                const cls = el.className?.toString?.()?.slice(0, 50) || '';
+                const text = (el.textContent || '').trim().slice(0, 30);
+                results.push({
+                    tag, role, cls, text,
+                    x: Math.round(rect.x),
+                    y: Math.round(rect.y),
+                    w: Math.round(rect.width),
+                    h: Math.round(rect.height),
+                });
+            }
+        } catch(e) {}
+    }
+    return JSON.stringify(results);
+})()
+"""
 
 
-WEIGHTS_URL = "https://raw.githubusercontent.com/ChaoningZhang/MobileSAM/master/weights/mobile_sam.pt"
-WEIGHTS_DIR = Path(__file__).parent / ".weights"
-WEIGHTS_PATH = WEIGHTS_DIR / "mobile_sam.pt"
+def _get_color(element: dict) -> tuple[int, int, int, int]:
+    """Get RGBA color for an element based on its tag/role."""
+    role = element.get("role", "")
+    tag = element.get("tag", "")
+    cls = element.get("cls", "").lower()
 
-# Reuse loaded model across calls
-_model = None
-_generator = None
+    # Role-based overrides
+    if role in ("navigation", "nav"):
+        return ELEMENT_COLORS["nav"]
+    if role == "banner":
+        return ELEMENT_COLORS["header"]
+    if role == "contentinfo":
+        return ELEMENT_COLORS["footer"]
+    if role == "button":
+        return ELEMENT_COLORS["button"]
+
+    # Class-based overrides
+    if "card" in cls:
+        return (0, 172, 193, 60)   # cyan, more opaque for cards
+    if "hero" in cls:
+        return (171, 71, 188, 60)  # purple
+    if "feature" in cls:
+        return (0, 172, 193, 50)
+    if "grid" in cls or "pipeline" in cls:
+        return (63, 81, 181, 40)   # indigo
+
+    # Tag-based
+    return ELEMENT_COLORS.get(tag, (128, 128, 128, 25))
 
 
-def _ensure_weights() -> bool:
-    """Download MobileSAM weights if not present."""
-    if WEIGHTS_PATH.exists():
-        return True
-    WEIGHTS_DIR.mkdir(parents=True, exist_ok=True)
-    print("      Downloading MobileSAM weights (~40MB)...", flush=True)
+def _get_label(element: dict) -> str:
+    """Get a short label for an element."""
+    tag = element.get("tag", "?")
+    role = element.get("role", "")
+    cls = element.get("cls", "")
+    text = element.get("text", "")
+
+    if role:
+        return f"[{role}]"
+
+    # Use class name if meaningful
+    for keyword in ("card", "hero", "feature", "pipeline", "agent", "grid", "nav", "footer"):
+        if keyword in cls.lower():
+            return f".{keyword}"
+
+    # Use tag + truncated text
+    if text and tag in ("h1", "h2", "h3", "h4", "button", "a"):
+        return f"<{tag}> {text[:20]}"
+
+    return f"<{tag}>"
+
+
+def _draw_overlay(
+    image: Image.Image,
+    elements: list[dict],
+) -> Image.Image:
+    """Draw color-coded element overlays on the image."""
+    # Create RGBA overlay
+    overlay = Image.new("RGBA", image.size, (0, 0, 0, 0))
+    draw = ImageDraw.Draw(overlay)
+
+    # Try to get a small font for labels
     try:
-        urllib.request.urlretrieve(WEIGHTS_URL, str(WEIGHTS_PATH))
-        print("      Weights downloaded.", flush=True)
-        return True
-    except Exception as e:
-        print(f"      [warn] Failed to download MobileSAM weights: {e}", flush=True)
-        return False
+        font = ImageFont.truetype("/System/Library/Fonts/SFCompact.ttf", 10)
+    except (OSError, IOError):
+        try:
+            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 10)
+        except (OSError, IOError):
+            font = ImageFont.load_default()
 
+    # Sort: larger elements first (so smaller ones draw on top)
+    sorted_elements = sorted(elements, key=lambda e: e["w"] * e["h"], reverse=True)
 
-def _get_generator() -> SamAutomaticMaskGenerator | None:
-    """Load MobileSAM model (cached across calls)."""
-    global _model, _generator
-    if _generator is not None:
-        return _generator
+    for el in sorted_elements:
+        x, y, w, h = el["x"], el["y"], el["w"], el["h"]
+        r, g, b, a = _get_color(el)
 
-    if not _ensure_weights():
-        return None
+        # Draw filled rectangle
+        draw.rectangle([x, y, x + w, y + h], fill=(r, g, b, a))
 
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    _model = sam_model_registry["vit_t"](checkpoint=str(WEIGHTS_PATH))
-    _model.to(device=device)
-    _model.eval()
-    _generator = SamAutomaticMaskGenerator(_model)
-    return _generator
+        # Draw border (more opaque)
+        draw.rectangle([x, y, x + w, y + h], outline=(r, g, b, min(a + 80, 255)), width=1)
 
+        # Draw label (only for elements tall enough)
+        if h > 14 and w > 30:
+            label = _get_label(el)
+            # Label background
+            text_bbox = draw.textbbox((x + 2, y + 1), label, font=font)
+            draw.rectangle(
+                [text_bbox[0] - 1, text_bbox[1] - 1, text_bbox[2] + 1, text_bbox[3] + 1],
+                fill=(0, 0, 0, 160),
+            )
+            draw.text((x + 2, y + 1), label, fill=(255, 255, 255, 220), font=font)
 
-def _create_overlay(image_np: np.ndarray, masks: list[dict]) -> np.ndarray:
-    """Create a color-coded segmentation overlay on the image.
-
-    Each mask gets a distinct semi-transparent color.
-    Larger masks (background) get more transparent, smaller (UI elements) more opaque.
-    """
-    overlay = image_np.copy().astype(np.float64)
-
-    # Sort masks by area descending — draw large (background) first, small (buttons) on top
-    sorted_masks = sorted(masks, key=lambda m: m["area"], reverse=True)
-
-    # Use a fixed color palette for consistency
-    palette = [
-        [66, 133, 244],   # blue (nav/header)
-        [234, 67, 53],    # red (CTAs)
-        [52, 168, 83],    # green (text blocks)
-        [251, 188, 4],    # yellow (icons)
-        [171, 71, 188],   # purple (hero sections)
-        [0, 172, 193],    # cyan (cards)
-        [255, 112, 67],   # orange (interactive)
-        [158, 158, 158],  # gray (footer/chrome)
-        [233, 30, 99],    # pink (forms)
-        [139, 195, 74],   # light green
-        [63, 81, 181],    # indigo
-        [255, 193, 7],    # amber
-        [0, 150, 136],    # teal
-        [121, 85, 72],    # brown
-        [96, 125, 139],   # blue-gray
-        [244, 67, 54],    # deep red
-    ]
-
-    for i, mask_data in enumerate(sorted_masks):
-        mask = mask_data["segmentation"]
-        color = np.array(palette[i % len(palette)], dtype=np.float64)
-
-        # Smaller areas = more opaque (they're UI elements), larger = more transparent
-        area_ratio = mask_data["area"] / (image_np.shape[0] * image_np.shape[1])
-        alpha = 0.25 if area_ratio > 0.1 else 0.45
-
-        overlay[mask] = overlay[mask] * (1 - alpha) + color * alpha
-
-    # Draw mask boundaries as thin lines
-    for mask_data in sorted_masks:
-        mask = mask_data["segmentation"].astype(np.uint8)
-        # Find contours via simple edge detection
-        edges_h = np.abs(np.diff(mask, axis=0, prepend=0))
-        edges_v = np.abs(np.diff(mask, axis=1, prepend=0))
-        boundary = (edges_h | edges_v).astype(bool)
-        overlay[boundary] = [255, 255, 255]  # white boundary lines
-
-    return np.clip(overlay, 0, 255).astype(np.uint8)
+    # Composite onto original
+    base = image.convert("RGBA")
+    return Image.alpha_composite(base, overlay).convert("RGB")
 
 
 async def generate_segmentation(
     screenshot_path: str | Path,
     output_path: str | Path,
+    url: str | None = None,
 ) -> bool:
-    """Generate a segmentation map for a screenshot using MobileSAM.
+    """Generate a DOM-based segmentation map for a screenshot.
+
+    Requires agent-browser to be open on the page already (or url provided).
 
     Args:
         screenshot_path: Path to the screenshot PNG.
         output_path: Path to save the segmentation overlay.
+        url: If provided, open this URL in agent-browser first.
 
     Returns:
         True if segmentation was saved, False otherwise.
@@ -138,8 +237,8 @@ async def generate_segmentation(
         print("      [warn] Pillow not installed — skipping segmentation", flush=True)
         return False
 
-    if not HAS_SAM:
-        print("      [warn] mobile_sam not installed (pip install git+https://github.com/ChaoningZhang/MobileSAM.git) — skipping segmentation", flush=True)
+    if not shutil.which("agent-browser"):
+        print("      [warn] agent-browser not found — skipping segmentation", flush=True)
         return False
 
     screenshot_path = Path(screenshot_path)
@@ -148,26 +247,64 @@ async def generate_segmentation(
         return False
 
     try:
-        generator = _get_generator()
-        if generator is None:
+        # Open URL if provided
+        if url:
+            proc = await asyncio.create_subprocess_exec(
+                "agent-browser", "open", url,
+                stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+            )
+            await asyncio.wait_for(proc.communicate(), timeout=15)
+
+        # Extract element bounding boxes via JS
+        proc = await asyncio.create_subprocess_exec(
+            "agent-browser", "eval", EXTRACT_ELEMENTS_JS,
+            stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+        )
+        stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=10)
+        raw = stdout.decode().strip()
+
+        # Parse JSON — agent-browser double-encodes (wraps in quotes)
+        elements = None
+        try:
+            parsed = json.loads(raw)
+            # If it parsed to a string, it was double-encoded — parse again
+            if isinstance(parsed, str):
+                elements = json.loads(parsed)
+            elif isinstance(parsed, list):
+                elements = parsed
+        except json.JSONDecodeError:
+            # Try line-by-line
+            for line in raw.split("\n"):
+                line = line.strip()
+                if line.startswith("[") or line.startswith('"['):
+                    try:
+                        p = json.loads(line)
+                        elements = json.loads(p) if isinstance(p, str) else p
+                        break
+                    except (json.JSONDecodeError, TypeError):
+                        continue
+
+        if not elements:
+            print(f"      [warn] Could not parse DOM elements from agent-browser", flush=True)
             return False
 
-        # Load image as numpy array (RGB)
+        if not elements:
+            print(f"      [warn] No elements found on page", flush=True)
+            return False
+
+        # Load screenshot and draw overlay
         image = Image.open(screenshot_path).convert("RGB")
-        image_np = np.array(image)
+        result = _draw_overlay(image, elements)
+        result.save(str(output_path))
 
-        # Run segmentation (in a thread to not block async loop)
-        loop = asyncio.get_event_loop()
-        masks = await loop.run_in_executor(None, generator.generate, image_np)
+        # Count element types
+        tags = {}
+        for el in elements:
+            t = el.get("tag", "?")
+            tags[t] = tags.get(t, 0) + 1
+        tag_summary = ", ".join(f"{v} {k}" for k, v in sorted(tags.items(), key=lambda x: -x[1])[:5])
 
-        if not masks:
-            print(f"      [warn] No masks generated for {screenshot_path.name}", flush=True)
-            return False
-
-        # Create overlay and save
-        overlay = _create_overlay(image_np, masks)
-        Image.fromarray(overlay).save(str(output_path))
-        print(f"      Segmentation: {Path(output_path).name} ({len(masks)} regions)", flush=True)
+        print(f"      Segmentation: {Path(output_path).name} ({len(elements)} elements: {tag_summary})", flush=True)
         return True
 
     except Exception as e:
@@ -175,11 +312,11 @@ async def generate_segmentation(
         return False
 
 
-async def generate_segmentation_for_dir(screenshot_dir: Path) -> None:
+async def generate_segmentation_for_dir(screenshot_dir: Path, url: str | None = None) -> None:
     """Generate segmentation maps for all screenshots in a directory."""
     for png in sorted(screenshot_dir.glob("screenshot*.png")):
         if "segmentation" in png.name:
             continue
         seg_path = png.with_name(png.stem + "-segmentation" + png.suffix)
         if not seg_path.exists():
-            await generate_segmentation(png, seg_path)
+            await generate_segmentation(png, seg_path, url=url)

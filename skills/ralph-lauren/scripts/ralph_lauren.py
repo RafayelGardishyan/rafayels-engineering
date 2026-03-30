@@ -279,7 +279,7 @@ async def run() -> None:
 
         # Step 3: Generate segmentation maps
         _print(f"\n  [3/6] Generating segmentation maps...")
-        await generate_segmentation_for_dir(iter_dir)
+        await generate_segmentation_for_dir(iter_dir, url=url)
         segmentation_paths = sorted(iter_dir.glob("*-segmentation.png"))
         _print(f"         Generated {len(segmentation_paths)} segmentation maps")
 
