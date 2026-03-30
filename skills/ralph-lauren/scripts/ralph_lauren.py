@@ -254,6 +254,8 @@ async def run() -> None:
     scores_history = []
     previous_changes = None
     previous_scores = None
+    last_metrics = {}    # carry forward for follow-up iterations
+    last_a11y = {}       # carry forward for follow-up iterations
 
     for i in range(1, max_iters + 1):
         iter_dir = run_dir / f"iteration-{i}"
@@ -264,28 +266,28 @@ async def run() -> None:
         _print(f"  ITERATION {i}/{max_iters}{'  (follow-up — faster protocol)' if is_followup else ''}")
         _print(f"{'='*60}")
 
-        # Step 1: Layer 1 — Deterministic metrics (skip on follow-ups)
-        metrics = {}
+        # Step 1: Layer 1 — Deterministic metrics (skip on follow-ups, carry forward)
         if not skip_deterministic and not is_followup:
             _print(f"\n  [1/7] Layer 1: Collecting deterministic metrics...")
-            metrics = await collect_metrics(url)
-            (iter_dir / "metrics.json").write_text(json.dumps(metrics, indent=2))
-            _print_metrics_summary(metrics)
+            last_metrics = await collect_metrics(url)
+            (iter_dir / "metrics.json").write_text(json.dumps(last_metrics, indent=2))
+            _print_metrics_summary(last_metrics)
         else:
-            _print(f"\n  [1/7] Layer 1: Skipped {'(follow-up)' if is_followup else '(--skip-deterministic)'}")
+            _print(f"\n  [1/7] Layer 1: Using {'previous' if is_followup else 'no'} metrics")
+        metrics = last_metrics
 
-        # Step 2: Layer 2 — Accessibility DOM checks
-        a11y = {}
+        # Step 2: Layer 2 — Accessibility DOM checks (skip on follow-ups, carry forward)
         if not is_followup:
             _print(f"\n  [2/7] Layer 2: Running accessibility checks...")
-            a11y = await run_accessibility_checks(url)
-            (iter_dir / "accessibility.json").write_text(json.dumps(a11y, indent=2))
-            a11y_score = a11y.get("score", 0)
-            passed = a11y.get("passed", 0)
-            failed = a11y.get("failed", 0)
+            last_a11y = await run_accessibility_checks(url)
+            (iter_dir / "accessibility.json").write_text(json.dumps(last_a11y, indent=2))
+            a11y_score = last_a11y.get("score", 0)
+            passed = last_a11y.get("passed", 0)
+            failed = last_a11y.get("failed", 0)
             _print(f"         A11y: {passed}/{passed + failed} checks passed (score: {a11y_score})")
         else:
-            _print(f"\n  [2/7] Layer 2: Skipped (follow-up)")
+            _print(f"\n  [2/7] Layer 2: Using previous a11y results")
+        a11y = last_a11y
 
         # Step 3: Take screenshots
         _print(f"\n  [3/7] Taking viewport screenshots...")
