@@ -78,7 +78,7 @@ async def generate_segmentation(
         )
 
         response = client.models.generate_content(
-            model="gemini-flash-3.1-image-preview",
+            model="gemini-3.1-flash-image-preview",
             contents=[SEGMENTATION_PROMPT, input_image],
             config=config,
         )

@@ -74,9 +74,71 @@ async def run_lighthouse(url: str) -> dict[str, Any] | None:
 
 
 async def run_axe(url: str) -> dict[str, Any] | None:
-    """Run axe accessibility scan and return violation summary."""
+    """Run axe accessibility scan via agent-browser's built-in Chrome.
+
+    Uses agent-browser to inject axe-core into the page and run it,
+    avoiding the ChromeDriver version mismatch issue with @axe-core/cli.
+    Falls back to npx @axe-core/cli if agent-browser is unavailable.
+    """
+    # Strategy 1: Use agent-browser to inject and run axe-core directly
+    if shutil.which("agent-browser"):
+        try:
+            # Inject axe-core from CDN and run it
+            axe_script = (
+                "const script = document.createElement('script');"
+                "script.src = 'https://cdnjs.cloudflare.com/ajax/libs/axe-core/4.10.2/axe.min.js';"
+                "script.onload = () => {"
+                "  axe.run().then(r => {"
+                "    document.title = JSON.stringify({violations: r.violations.length, "
+                "      passes: r.passes.length, incomplete: r.incomplete.length, "
+                "      details: r.violations.slice(0, 20).map(v => ({id: v.id, impact: v.impact, "
+                "        description: v.description, nodes: v.nodes.length}))});"
+                "  });"
+                "};"
+                "document.head.appendChild(script);"
+            )
+
+            # Open page and inject axe
+            proc = await asyncio.create_subprocess_exec(
+                "agent-browser", "open", url,
+                stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+            )
+            await asyncio.wait_for(proc.communicate(), timeout=15)
+
+            proc = await asyncio.create_subprocess_exec(
+                "agent-browser", "eval", axe_script,
+                stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+            )
+            await asyncio.wait_for(proc.communicate(), timeout=10)
+
+            # Wait for axe to complete
+            await asyncio.sleep(5)
+
+            # Read results from document.title
+            proc = await asyncio.create_subprocess_exec(
+                "agent-browser", "get", "title",
+                stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+            )
+            stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=10)
+            title = stdout.decode().strip()
+
+            try:
+                data = json.loads(title)
+                return {
+                    "violations_count": data.get("violations", 0),
+                    "passes_count": data.get("passes", 0),
+                    "incomplete_count": data.get("incomplete", 0),
+                    "violations": data.get("details", []),
+                }
+            except (json.JSONDecodeError, TypeError):
+                return {"note": "axe-core injection ran but results not parseable"}
+
+        except (asyncio.TimeoutError, Exception) as e:
+            return {"error": f"axe via agent-browser failed: {e}"}
+
+    # Strategy 2: Fall back to npx @axe-core/cli
     if not shutil.which("npx"):
-        return {"error": "npx not found — skipping axe"}
+        return {"error": "Neither agent-browser nor npx available — skipping axe"}
 
     try:
         proc = await asyncio.create_subprocess_exec(
@@ -85,10 +147,8 @@ async def run_axe(url: str) -> dict[str, Any] | None:
             stderr=asyncio.subprocess.PIPE,
         )
         stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=60)
-
         output = stdout.decode()
 
-        # axe CLI outputs JSON array
         try:
             results = json.loads(output)
             if isinstance(results, list) and results:
@@ -103,7 +163,7 @@ async def run_axe(url: str) -> dict[str, Any] | None:
                             "description": v.get("description", ""),
                             "nodes_affected": len(v.get("nodes", [])),
                         }
-                        for v in violations[:20]  # cap at 20 for token efficiency
+                        for v in violations[:20]
                     ],
                     "passes_count": len(page.get("passes", [])),
                     "incomplete_count": len(page.get("incomplete", [])),
@@ -111,7 +171,6 @@ async def run_axe(url: str) -> dict[str, Any] | None:
         except json.JSONDecodeError:
             pass
 
-        # Fallback: parse text output
         return {"raw_output": output[:2000]}
 
     except asyncio.TimeoutError:
