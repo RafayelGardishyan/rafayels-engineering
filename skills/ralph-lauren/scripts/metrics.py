@@ -40,12 +40,13 @@ def _rate(metric: str, value: float | None) -> str:
 
 
 def _cwv_score(ratings: list[str]) -> int:
-    """Average non-null CWV ratings into a 0-100 score."""
-    score_map = {"good": 100, "needs-work": 50, "poor": 0}
-    scored = [score_map[r] for r in ratings if r in score_map]
-    if not scored:
-        return 0
-    return round(sum(scored) / len(scored))
+    """Average CWV ratings into a 0-100 score.
+
+    Unknown/missing metrics count as 50 (needs-work) to avoid inflating
+    the score when most metrics didn't fire.
+    """
+    score_map = {"good": 100, "needs-work": 50, "poor": 0, "unknown": 50}
+    return round(sum(score_map.get(r, 50) for r in ratings) / len(ratings)) if ratings else 0
 
 
 # ---------------------------------------------------------------------------
@@ -93,8 +94,8 @@ async def collect_core_web_vitals(url: str) -> dict[str, Any]:
         )
         await asyncio.wait_for(proc.communicate(), timeout=15)
 
-        # Inject web-vitals library and register observers.
-        # Results accumulate in window.__cwv, then get written to document.title.
+        # Inject web-vitals library with {reportAllChanges: true} so metrics
+        # fire immediately instead of waiting for visibility change / interaction.
         inject_js = """
             (function() {
                 window.__cwv = {};
@@ -102,12 +103,13 @@ async def collect_core_web_vitals(url: str) -> dict[str, Any]:
                 s.src = 'https://unpkg.com/web-vitals@4/dist/web-vitals.iife.js';
                 s.onload = function() {
                     var wv = webVitals;
+                    var opts = {reportAllChanges: true};
                     function record(m) { window.__cwv[m.name.toLowerCase()] = m.value; }
-                    wv.onLCP(record);
-                    wv.onCLS(record);
-                    wv.onFCP(record);
-                    wv.onTTFB(record);
-                    wv.onINP(record);
+                    wv.onLCP(record, opts);
+                    wv.onCLS(record, opts);
+                    wv.onFCP(record, opts);
+                    wv.onTTFB(record, opts);
+                    wv.onINP(record, opts);
                 };
                 document.head.appendChild(s);
             })();
@@ -119,8 +121,17 @@ async def collect_core_web_vitals(url: str) -> dict[str, Any]:
         )
         await asyncio.wait_for(proc.communicate(), timeout=10)
 
-        # Allow time for metrics to fire (LCP needs page to be "loaded")
-        await asyncio.sleep(3)
+        # Wait for initial metrics to fire
+        await asyncio.sleep(2)
+
+        # Scroll down and back to trigger LCP finalization and CLS measurement
+        scroll_js = "window.scrollTo(0, document.body.scrollHeight); setTimeout(() => window.scrollTo(0, 0), 500);"
+        proc = await asyncio.create_subprocess_exec(
+            "agent-browser", "eval", scroll_js,
+            stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+        )
+        await asyncio.wait_for(proc.communicate(), timeout=5)
+        await asyncio.sleep(2)
 
         # Write collected metrics to document.title so we can read them back
         flush_js = "document.title = JSON.stringify(window.__cwv || {});"
