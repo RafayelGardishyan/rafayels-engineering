@@ -163,7 +163,47 @@ First invocation downloads the BGE-small model (~67MB) into
 
 ## Troubleshooting
 
-**`memory doctor` reports `unavailable`**
+### macOS: `AttributeError: 'sqlite3.Connection' object has no attribute 'enable_load_extension'`
+
+**Cause**: macOS system Python and pyenv-installed Python are built *without* the loadable SQLite extension API. sqlite-vec cannot load into these interpreters.
+
+**Fix**: Use **Homebrew Python 3.12** which ships with `--enable-loadable-sqlite-extensions`:
+
+```bash
+brew install python@3.12
+/opt/homebrew/bin/python3.12 -m pip install --break-system-packages \
+  -r ${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/requirements.txt
+```
+
+Then invoke `memory.py` with Homebrew Python explicitly:
+```bash
+/opt/homebrew/bin/python3.12 ${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory.py <subcommand>
+```
+
+**Alternative**: rebuild pyenv Python with extension support:
+```bash
+PYTHON_CONFIGURE_OPTS="--enable-loadable-sqlite-extensions" pyenv install 3.12.12
+```
+
+This is a macOS-specific platform limitation, not a memory layer bug. Linux distros typically ship Python with extension support enabled.
+
+### Python version compatibility
+
+The memory layer requires Python **3.10–3.12**. Python 3.13+ is not currently supported because `fastembed==0.4.2` doesn't publish wheels for those versions. Pin yourself to 3.12 for now.
+
+### CLI flag ordering
+
+The `--json` flag is a top-level argparse option, so it must come **before** the subcommand:
+
+```bash
+# ✅ Correct
+memory --json write --phase plan --query "..."
+
+# ❌ Fails with "unrecognized arguments: --json"
+memory write --phase plan --query "..." --json
+```
+
+### `memory doctor` reports `unavailable`
 Install dependencies:
 ```bash
 pip install -r ${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/requirements.txt
