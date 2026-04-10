@@ -1,0 +1,8 @@
+# memory-proposer depends on the memory skill at runtime via sys.path
+# (sibling import). It also needs scipy for clustering.
+
+scipy>=1.11,<2.0
+numpy>=1.26,<3.0
+
+# Runtime requirement: `memory` skill must also be installed (shared deps).
+# See skills/memory/scripts/requirements.txt

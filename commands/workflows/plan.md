@@ -84,6 +84,18 @@ Refine the idea through collaborative dialogue using the **AskUserQuestion tool*
 
 ## Main Tasks
 
+### 0.5. Retrieve Relevant Cases from Memory
+
+Before local research, query the memory layer for relevant plan-phase cases:
+
+```bash
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory.py query \
+  "<feature description>" --phase plan --k 3 --format md 2>/dev/null
+```
+
+- If cases are returned, include them in the research context.
+- If exit code is 75 (memory unavailable) or output is empty, continue silently.
+
 ### 1. Local Research (Always Runs - Parallel)
 
 <thinking>
@@ -276,6 +288,36 @@ Examples:
 After writing the plan file, automatically run the `document-review` skill on it. This is not optional — it runs before presenting post-generation options.
 
 Load the `document-review` skill and apply it to the plan document just written.
+
+## Memory Capture
+
+After document review, capture the plan as a memory case:
+
+```bash
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory.py write \
+  --phase plan \
+  --type decision \
+  --query "<feature description>" \
+  --title "<plan title>" \
+  --plan "<approach summary>" \
+  --outcome "<plan file path>" \
+  --tags '["plan"]' \
+  --json 2>/dev/null
+```
+
+If document-review required substantial changes, emit a review signal:
+
+```bash
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory.py signal \
+  <case_id> review -0.3 --source "phase:plan-review" 2>/dev/null
+```
+
+Otherwise emit a positive review signal:
+
+```bash
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory.py signal \
+  <case_id> review 1.0 --source "phase:plan-review" 2>/dev/null
+```
 
 ## Post-Generation Options
 

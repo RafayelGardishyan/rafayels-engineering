@@ -18,6 +18,17 @@ This command takes a work document (plan, specification, or todo file) and execu
 
 ## Execution Workflow
 
+### Phase 0.5: Retrieve Relevant Cases from Memory
+
+Before starting work, query memory for relevant past implementation cases:
+
+```bash
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory.py query \
+  "<plan title or feature description>" --phase work --k 3 --format md 2>/dev/null
+```
+
+If cases are returned, include them in the work context. Pay attention to past failure cases — they list things to avoid. Exit code 75 or empty output means proceed without injection.
+
 ### Phase 1: Quick Start
 
 1. **Read Plan and Clarify**
@@ -288,6 +299,39 @@ This command takes a work document (plan, specification, or todo file) and execu
    - Link to PR
    - Note any follow-up work needed
    - Suggest next steps if applicable
+
+5. **Capture Case to Memory**
+
+   After the PR is created, capture this work as a memory case:
+
+   ```bash
+   python3 ${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory.py write \
+     --phase work \
+     --type solution \
+     --query "<plan title or feature description>" \
+     --title "<short description of what was built>" \
+     --plan "<approach summary>" \
+     --trajectory '<key actions as JSON>' \
+     --outcome "<PR URL>" \
+     --tags "<JSON array of tags>" \
+     --json 2>/dev/null
+   ```
+
+   Store the returned `case_id` for later signal emission.
+
+6. **Emit Signals**
+
+   - If tests passed on the first try, emit a positive CI signal:
+     ```bash
+     python3 ${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory.py signal \
+       <case_id> ci 1.0 --source "tests-passed" 2>/dev/null
+     ```
+   - If you had to retry or fix failing tests, emit a neutral signal:
+     ```bash
+     python3 ${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory.py signal \
+       <case_id> ci 0.0 --source "tests-retried" 2>/dev/null
+     ```
+   - If the PR gets merged later (by `/workflows:review` or user), the review workflow will emit the `merge` signal.
 
 ---
 
