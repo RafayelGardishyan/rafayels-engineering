@@ -1,6 +1,6 @@
 {
   "name": "rafayels-engineering",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Rafayel's engineering toolkit: end-to-end feature workflow with brainstorm-plan-work-review-compound pipeline, ADR management, dev logs, and project bootstrapping.",
   "author": {
     "name": "Rafayel Gardishyan"
