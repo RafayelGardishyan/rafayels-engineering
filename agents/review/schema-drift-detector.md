@@ -8,14 +8,14 @@ model: inherit
 <example>
 Context: The user has a PR with a migration and wants to verify schema.rb is clean.
 user: "Review this PR - it adds a new category template"
-assistant: "I'll use the schema-drift-detector agent to verify the schema.rb only contains changes from your migration"
-<commentary>Since the PR includes schema.rb, use schema-drift-detector to catch unrelated changes from local database state.</commentary>
+assistant: "Let me cross-reference the schema.rb changes against your PR's migrations to verify nothing unrelated slipped in."
+<commentary>PR includes schema.rb — needs drift detection to catch unrelated changes from local database state, not a general migration or data integrity review.</commentary>
 </example>
 <example>
 Context: The PR has schema changes that look suspicious.
 user: "The schema.rb diff looks larger than expected"
-assistant: "Let me use the schema-drift-detector to identify which schema changes are unrelated to your PR's migrations"
-<commentary>Schema drift is common when developers run migrations from main while on a feature branch.</commentary>
+assistant: "Let me identify which schema.rb changes are unrelated to your PR's migrations."
+<commentary>Schema drift is common when developers run migrations from main while on a feature branch — needs targeted drift detection, not a general migration or code review.</commentary>
 </example>
 </examples>
 

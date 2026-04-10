@@ -8,14 +8,14 @@ model: inherit
 <example>
 Context: The user has just written a database migration that adds a new column and updates existing records.
 user: "I've created a migration to add a status column to the orders table"
-assistant: "I'll use the data-integrity-guardian agent to review this migration for safety and data integrity concerns"
-<commentary>Since the user has created a database migration, use the data-integrity-guardian agent to ensure the migration is safe, handles existing data properly, and maintains referential integrity.</commentary>
+assistant: "Let me review this migration for safety — checking reversibility, NULL handling, referential integrity, and impact on existing data."
+<commentary>Database migration needs data integrity review — not a general code review, but specialized analysis of migration safety, constraints, and data preservation.</commentary>
 </example>
 <example>
 Context: The user has implemented a service that transfers data between models.
 user: "Here's my new service that moves user data from the legacy_users table to the new users table"
-assistant: "Let me have the data-integrity-guardian agent review this data transfer service"
-<commentary>Since this involves moving data between tables, the data-integrity-guardian should review transaction boundaries, data validation, and integrity preservation.</commentary>
+assistant: "Let me review this data transfer service for transaction boundaries, data validation, and integrity preservation."
+<commentary>Data transfer between tables needs integrity-focused review — checking transaction safety, referential integrity, and data loss prevention rather than general code quality.</commentary>
 </example>
 </examples>
 

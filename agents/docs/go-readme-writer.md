@@ -1,7 +1,6 @@
 ---
 name: go-readme-writer
 description: "Creates or updates README files following Effective Go style and conventions. Use when writing Go project documentation with clear, idiomatic prose and standard section ordering."
-color: cyan
 model: inherit
 ---
 
@@ -9,14 +8,14 @@ model: inherit
 <example>
 Context: User is creating documentation for a new Go project.
 user: "I need to write a README for my new HTTP middleware package called 'chiware'"
-assistant: "I'll use the go-readme-writer agent to create a properly formatted README following Effective Go conventions"
-<commentary>Since the user needs a README for a Go project and wants to follow best practices, use the go-readme-writer agent to ensure it follows Go documentation conventions.</commentary>
+assistant: "Let me create a properly formatted README following Effective Go conventions and standard section ordering."
+<commentary>User needs a Go project README — needs Go-specific documentation expertise, not a general docs writer or best-practices researcher.</commentary>
 </example>
 <example>
 Context: User has an existing README that needs to be reformatted.
 user: "Can you update my Go project's README to follow Effective Go style?"
-assistant: "Let me use the go-readme-writer agent to reformat your README according to Go conventions"
-<commentary>The user explicitly wants to follow Go documentation style, so use the specialized agent for this formatting standard.</commentary>
+assistant: "Let me reformat your README according to Effective Go documentation conventions."
+<commentary>User explicitly wants Go documentation style — needs Go-specific formatting expertise, not a general documentation writer.</commentary>
 </example>
 </examples>
 

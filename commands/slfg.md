@@ -1,9 +1,11 @@
 ---
 name: slfg
 description: Full autonomous engineering workflow using swarm mode for parallel execution
-argument-hint: "[feature description]"
+argument-hint: "[feature description] [--strategy=<name>]"
 disable-model-invocation: true
 ---
+
+**Default strategy:** `full-process` (with swarm-mode work phase). If a `--strategy=<name>` argument is provided, load `references/strategies/<name>.md` and apply its phase overrides. Skip phases where the strategy sets `enabled: false`.
 
 Swarm-enabled LFG. Run these steps in order, parallelizing where indicated.
 

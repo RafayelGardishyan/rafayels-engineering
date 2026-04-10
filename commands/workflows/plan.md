@@ -47,6 +47,24 @@ Use **AskUserQuestion tool** to ask which brainstorm to use, or whether to proce
 
 **If no brainstorm found (or not relevant), run idea refinement:**
 
+### 0.1b: Task Classification
+
+Determine if this is a software or non-software task.
+
+**Software signals** (any 2+ = software):
+- Keywords: implement, refactor, fix bug, API, endpoint, component, deploy, migrate, test, CI/CD
+- References to files, repos, branches, PRs
+- Mentions specific tech (React, SQL, Docker, etc.)
+
+**Non-software signals** (absence of software signals + any 1):
+- Keywords: plan, organize, schedule, budget, itinerary, strategy, proposal, curriculum, agenda
+- Time-oriented language: dates, deadlines, durations
+- People/logistics: venues, attendees, stakeholders, suppliers
+
+**Classifier rule:** Check software signals first (high precision). Ambiguous cases default to software.
+
+If non-software: load `references/universal-planning.md` and follow that workflow instead.
+
 Refine the idea through collaborative dialogue using the **AskUserQuestion tool**:
 
 - Ask questions one at a time to understand the idea fully
@@ -76,6 +94,7 @@ Run these agents **in parallel** to gather local context:
 
 - Task repo-research-analyst(feature_description)
 - Task learnings-researcher(feature_description)
+- Task vault-researcher(feature_description) — conditional: only if obsidian-adr or obsidian MCP is available, skip silently if not
 
 **What to look for:**
 - **Repo research:** existing patterns, CLAUDE.md guidance, technology familiarity, pattern consistency
@@ -162,247 +181,10 @@ After planning the issue structure, run SpecFlow Analyzer to validate and refine
 
 Select how comprehensive you want the issue to be, simpler is mostly better.
 
-#### 📄 MINIMAL (Quick Issue)
-
-**Best for:** Simple bugs, small improvements, clear features
-
-**Includes:**
-
-- Problem statement or feature description
-- Basic acceptance criteria
-- Essential context only
-
-**Structure:**
-
-````markdown
----
-title: [Issue Title]
-type: [feat|fix|refactor]
-date: YYYY-MM-DD
----
-
-# [Issue Title]
-
-[Brief problem/feature description]
-
-## Acceptance Criteria
-
-- [ ] Core requirement 1
-- [ ] Core requirement 2
-
-## Context
-
-[Any critical information]
-
-## MVP
-
-### test.rb
-
-```ruby
-class Test
-  def initialize
-    @name = "test"
-  end
-end
-```
-
-## References
-
-- Related issue: #[issue_number]
-- Documentation: [relevant_docs_url]
-````
-
-#### 📋 MORE (Standard Issue)
-
-**Best for:** Most features, complex bugs, team collaboration
-
-**Includes everything from MINIMAL plus:**
-
-- Detailed background and motivation
-- Technical considerations
-- Success metrics
-- Dependencies and risks
-- Basic implementation suggestions
-
-**Structure:**
-
-```markdown
----
-title: [Issue Title]
-type: [feat|fix|refactor]
-date: YYYY-MM-DD
----
-
-# [Issue Title]
-
-## Overview
-
-[Comprehensive description]
-
-## Problem Statement / Motivation
-
-[Why this matters]
-
-## Proposed Solution
-
-[High-level approach]
-
-## Technical Considerations
-
-- Architecture impacts
-- Performance implications
-- Security considerations
-
-## Acceptance Criteria
-
-- [ ] Detailed requirement 1
-- [ ] Detailed requirement 2
-- [ ] Testing requirements
-
-## Success Metrics
-
-[How we measure success]
-
-## Dependencies & Risks
-
-[What could block or complicate this]
-
-## References & Research
-
-- Similar implementations: [file_path:line_number]
-- Best practices: [documentation_url]
-- Related PRs: #[pr_number]
-```
-
-#### 📚 A LOT (Comprehensive Issue)
-
-**Best for:** Major features, architectural changes, complex integrations
-
-**Includes everything from MORE plus:**
-
-- Detailed implementation plan with phases
-- Alternative approaches considered
-- Extensive technical specifications
-- Resource requirements and timeline
-- Future considerations and extensibility
-- Risk mitigation strategies
-- Documentation requirements
-
-**Structure:**
-
-```markdown
----
-title: [Issue Title]
-type: [feat|fix|refactor]
-date: YYYY-MM-DD
----
-
-# [Issue Title]
-
-## Overview
-
-[Executive summary]
-
-## Problem Statement
-
-[Detailed problem analysis]
-
-## Proposed Solution
-
-[Comprehensive solution design]
-
-## Technical Approach
-
-### Architecture
-
-[Detailed technical design]
-
-### Implementation Phases
-
-#### Phase 1: [Foundation]
-
-- Tasks and deliverables
-- Success criteria
-- Estimated effort
-
-#### Phase 2: [Core Implementation]
-
-- Tasks and deliverables
-- Success criteria
-- Estimated effort
-
-#### Phase 3: [Polish & Optimization]
-
-- Tasks and deliverables
-- Success criteria
-- Estimated effort
-
-## Alternative Approaches Considered
-
-[Other solutions evaluated and why rejected]
-
-## Acceptance Criteria
-
-### Functional Requirements
-
-- [ ] Detailed functional criteria
-
-### Non-Functional Requirements
-
-- [ ] Performance targets
-- [ ] Security requirements
-- [ ] Accessibility standards
-
-### Quality Gates
-
-- [ ] Test coverage requirements
-- [ ] Documentation completeness
-- [ ] Code review approval
-
-## Success Metrics
-
-[Detailed KPIs and measurement methods]
-
-## Dependencies & Prerequisites
-
-[Detailed dependency analysis]
-
-## Risk Analysis & Mitigation
-
-[Comprehensive risk assessment]
-
-## Resource Requirements
-
-[Team, time, infrastructure needs]
-
-## Future Considerations
-
-[Extensibility and long-term vision]
-
-## Documentation Plan
-
-[What docs need updating]
-
-## References & Research
-
-### Internal References
-
-- Architecture decisions: [file_path:line_number]
-- Similar features: [file_path:line_number]
-- Configuration: [file_path:line_number]
-
-### External References
-
-- Framework documentation: [url]
-- Best practices guide: [url]
-- Industry standards: [url]
-
-### Related Work
-
-- Previous PRs: #[pr_numbers]
-- Related issues: #[issue_numbers]
-- Design documents: [links]
-```
+**Load `references/plan-templates.md`** for the full template structures for each level:
+- **MINIMAL** — Simple bugs, small improvements (problem + acceptance criteria + context)
+- **MORE** — Most features, complex bugs (adds motivation, technical considerations, success metrics)
+- **A LOT** — Major features, architectural changes (adds phases, alternatives, risk analysis)
 
 ### 5. Issue Creation & Formatting
 
@@ -489,9 +271,15 @@ Examples:
 - ❌ `docs/plans/2026-01-15-feat: user auth-plan.md` (invalid characters - colon and space)
 - ❌ `docs/plans/feat-user-auth-plan.md` (missing date prefix)
 
+## Mandatory Document Review
+
+After writing the plan file, automatically run the `document-review` skill on it. This is not optional — it runs before presenting post-generation options.
+
+Load the `document-review` skill and apply it to the plan document just written.
+
 ## Post-Generation Options
 
-After writing the plan file, use the **AskUserQuestion tool** to present these options:
+After document review completes, use the **AskUserQuestion tool** to present these options:
 
 **Question:** "Plan ready at `docs/plans/YYYY-MM-DD-<type>-<name>-plan.md`. What would you like to do next?"
 

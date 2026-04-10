@@ -1,9 +1,11 @@
 ---
 name: lfg
 description: Full autonomous engineering workflow
-argument-hint: "[feature description]"
+argument-hint: "[feature description] [--strategy=<name>]"
 disable-model-invocation: true
 ---
+
+**Default strategy:** `full-process`. If a `--strategy=<name>` argument is provided, load `references/strategies/<name>.md` and apply its phase overrides. Skip phases where the strategy sets `enabled: false`.
 
 Run these slash commands in order. Do not do anything else.
 

@@ -8,14 +8,14 @@ model: inherit
 <example>
 Context: The user has just implemented a new feature and wants to ensure it's as simple as possible.
 user: "I've finished implementing the user authentication system"
-assistant: "Great! Let me review the implementation for simplicity and minimalism using the code-simplicity-reviewer agent"
-<commentary>Since implementation is complete, use the code-simplicity-reviewer agent to identify simplification opportunities.</commentary>
+assistant: "Let me review the implementation for YAGNI violations and simplification opportunities"
+<commentary>Implementation complete — route here for simplicity review, not to rafayel-go-reviewer (which checks Go conventions) or security-sentinel (which checks vulnerabilities).</commentary>
 </example>
 <example>
 Context: The user has written complex business logic and wants to simplify it.
 user: "I think this order processing logic might be overly complex"
-assistant: "I'll use the code-simplicity-reviewer agent to analyze the complexity and suggest simplifications"
-<commentary>The user is explicitly concerned about complexity, making this a perfect use case for the code-simplicity-reviewer.</commentary>
+assistant: "Let me analyze the complexity and suggest simplifications"
+<commentary>User explicitly concerned about complexity. Route here for simplification analysis, not to architecture-strategist (which checks structural fit).</commentary>
 </example>
 </examples>
 

@@ -8,14 +8,14 @@ model: inherit
 <example>
 Context: The user needs to understand how to properly implement a new feature using a specific library.
 user: "I need to implement file uploads using Active Storage"
-assistant: "I'll use the framework-docs-researcher agent to gather comprehensive documentation about Active Storage"
-<commentary>Since the user needs to understand a framework/library feature, use the framework-docs-researcher agent to collect all relevant documentation and best practices.</commentary>
+assistant: "Let me gather comprehensive documentation about Active Storage — official docs, version-specific constraints, and implementation patterns."
+<commentary>User needs framework/library documentation — needs targeted docs research, not a code review or general best-practices survey.</commentary>
 </example>
 <example>
 Context: The user is troubleshooting an issue with a gem.
 user: "Why is the turbo-rails gem not working as expected?"
-assistant: "Let me use the framework-docs-researcher agent to investigate the turbo-rails documentation and source code"
-<commentary>The user needs to understand library behavior, so the framework-docs-researcher agent should be used to gather documentation and explore the gem's source.</commentary>
+assistant: "Let me investigate the turbo-rails documentation and source code to understand the expected behavior."
+<commentary>User needs to understand library behavior — needs documentation research and source exploration, not a code review or debugging session.</commentary>
 </example>
 </examples>
 

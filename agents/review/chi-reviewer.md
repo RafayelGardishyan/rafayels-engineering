@@ -8,20 +8,20 @@ model: inherit
 <example>
 Context: The user wants to review a recently implemented Go HTTP handler.
 user: "I just implemented a new authentication middleware using JWT and a separate microservice"
-assistant: "I'll use the Chi reviewer agent to evaluate this implementation"
-<commentary>Since the user has implemented auth with patterns that might be overengineered (separate microservice for what could be middleware), the chi-reviewer agent should analyze this critically.</commentary>
+assistant: "Let me evaluate this authentication implementation for Go idiom adherence and unnecessary complexity."
+<commentary>Auth implementation with a separate microservice smells like overengineering — needs Go/Chi-specific review, not a general architecture or security audit.</commentary>
 </example>
 <example>
 Context: The user is planning a new Go API feature and wants feedback on the approach.
 user: "I'm thinking of using a dependency injection framework for our Chi handlers"
-assistant: "Let me invoke the Chi reviewer to analyze this architectural decision"
-<commentary>DI frameworks in Go are often unnecessary complexity, making this perfect for chi-reviewer analysis.</commentary>
+assistant: "Let me analyze whether a dependency injection framework is appropriate here, or if simpler Go patterns would suffice."
+<commentary>DI frameworks in Go are often unnecessary complexity — needs idiomatic Go review, not a general best-practices or architecture analysis.</commentary>
 </example>
 <example>
 Context: The user has written a Go service layer and wants it reviewed.
 user: "I've created a new service struct with interfaces for every dependency"
-assistant: "I'll use the Chi reviewer agent to review this service implementation"
-<commentary>Over-abstraction with interfaces is a common Go anti-pattern, making this ideal for chi-reviewer scrutiny.</commentary>
+assistant: "Let me review this service implementation for over-abstraction and interface pollution."
+<commentary>Interfaces for every dependency is a common Go anti-pattern — needs idiomatic Go scrutiny, not a general pattern-recognition or architecture review.</commentary>
 </example>
 </examples>
 

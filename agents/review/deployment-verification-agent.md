@@ -8,14 +8,14 @@ model: inherit
 <example>
 Context: The user has a PR that modifies how emails are classified.
 user: "This PR changes the classification logic, can you create a deployment checklist?"
-assistant: "I'll use the deployment-verification-agent to create a Go/No-Go checklist with verification queries"
-<commentary>Since the PR affects production data behavior, use deployment-verification-agent to create concrete verification and rollback plans.</commentary>
+assistant: "Let me create a Go/No-Go deployment checklist with SQL verification queries and rollback procedures."
+<commentary>PR affects production data behavior — needs concrete deployment verification and rollback planning, not a general code review or migration analysis.</commentary>
 </example>
 <example>
 Context: The user is deploying a migration that backfills data.
 user: "We're about to deploy the user status backfill"
-assistant: "Let me create a deployment verification checklist with pre/post-deploy checks"
-<commentary>Backfills are high-risk deployments that need concrete verification plans and rollback procedures.</commentary>
+assistant: "Let me create a deployment verification checklist with pre/post-deploy checks and monitoring plans."
+<commentary>Backfills are high-risk deployments — needs concrete verification plans and rollback procedures, not a migration logic review or general code review.</commentary>
 </example>
 </examples>
 

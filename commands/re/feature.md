@@ -16,6 +16,35 @@ Orchestrate the full feature lifecycle: gather context, brainstorm, plan, implem
 
 ## Execution Flow
 
+### Phase -1: Select Strategy
+
+Before executing any phases, select a workflow strategy.
+
+1. **Discover available strategies**: List all `.md` files in `references/strategies/`:
+   ```bash
+   ls references/strategies/*.md 2>/dev/null
+   ```
+
+2. **Check for `--strategy` argument**: If the user passed `--strategy=<name>`, load that strategy file directly.
+
+3. **If no strategy specified, ask the user**:
+   Read the "When to Use" section of each discovered strategy file. Present them via AskUserQuestion:
+
+   ```
+   "Which workflow strategy should we use?"
+   - Full Process (Recommended) — Complete pipeline: brainstorm → plan → work → review → compound → docs
+   - Quick Spike — Fast prototype: skip brainstorm, lightweight plan, minimal review
+   - Security First — Maximum rigor: threat modeling, all security reviewers, no auto-merge
+   - Review Only — Audit existing code: skip implementation, run all reviewers
+   ```
+
+4. **Load the selected strategy file** and read it as natural-language guidance. Before each subsequent phase:
+   - If the strategy sets `enabled: false` for that phase → skip the phase entirely
+   - If the strategy provides `guidance:` text → follow that guidance
+   - If the phase is not mentioned in the strategy → use default behavior
+
+5. **Composition**: If the strategy has `base: <other-strategy>`, load that base strategy first and merge. The overlay's phase keys replace base keys per-phase; everything else inherits.
+
 ### Phase 0: Gather Project Context
 
 Before anything else, understand the project landscape.
@@ -29,7 +58,11 @@ Before anything else, understand the project landscape.
    cat CLAUDE.md 2>/dev/null
    ```
 
-2. **Dev logs**: Check recent dev logs for context on recent work and decisions.
+2. **Vault research** (conditional): If obsidian-adr or obsidian MCP tools are available, dispatch the vault-researcher agent in parallel with documentation scan.
+   - Task vault-researcher("Search vault for context related to: <feature_description>")
+   - If no Obsidian MCP available, this step is skipped silently (zero cost)
+
+3. **Dev logs**: Check recent dev logs for context on recent work and decisions.
    ```bash
    skill: dev-log
    ```

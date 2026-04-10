@@ -8,14 +8,14 @@ model: inherit
 <example>
 Context: The user wants to analyze their codebase for patterns and potential issues.
 user: "Can you check our codebase for design patterns and anti-patterns?"
-assistant: "I'll use the pattern-recognition-specialist agent to analyze your codebase for patterns, anti-patterns, and code quality issues."
-<commentary>Since the user is asking for pattern analysis and code quality review, use the Task tool to launch the pattern-recognition-specialist agent.</commentary>
+assistant: "Let me scan your codebase for design patterns, anti-patterns, naming inconsistencies, and code duplication."
+<commentary>User is asking for pattern analysis and code quality review — needs specialized pattern detection, not a general code review or architecture analysis.</commentary>
 </example>
 <example>
 Context: After implementing a new feature, the user wants to ensure it follows established patterns.
 user: "I just added a new service layer. Can we check if it follows our existing patterns?"
-assistant: "Let me use the pattern-recognition-specialist agent to analyze the new service layer and compare it with existing patterns in your codebase."
-<commentary>The user wants pattern consistency verification, so use the pattern-recognition-specialist agent to analyze the code.</commentary>
+assistant: "Let me analyze your new service layer and compare it against the established patterns in your codebase."
+<commentary>User wants pattern consistency verification — needs specialized pattern matching and convention analysis, not a general code review or architecture assessment.</commentary>
 </example>
 </examples>
 

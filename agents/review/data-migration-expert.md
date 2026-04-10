@@ -8,14 +8,14 @@ model: inherit
 <example>
 Context: The user has a PR with database migrations that involve ID mappings.
 user: "Review this PR that migrates from action_id to action_module_name"
-assistant: "I'll use the data-migration-expert agent to validate the ID mappings and migration safety"
-<commentary>Since the PR involves ID mappings and data migration, use the data-migration-expert to verify the mappings match production and check for swapped values.</commentary>
+assistant: "Let me validate the ID mappings against production data and check for swapped values or migration safety issues."
+<commentary>ID mapping migration is high-risk for swapped values — needs specialized migration validation against production reality, not a general code or integrity review.</commentary>
 </example>
 <example>
 Context: The user has a migration that transforms enum values.
 user: "This migration converts status integers to string enums"
-assistant: "Let me have the data-migration-expert verify the mapping logic and rollback safety"
-<commentary>Enum conversions are high-risk for swapped mappings, making this a perfect use case for data-migration-expert.</commentary>
+assistant: "Let me verify the enum mapping logic against production data and check rollback safety."
+<commentary>Enum conversions are high-risk for swapped mappings — needs specialized migration validation, not a general code review or data integrity check.</commentary>
 </example>
 </examples>
 

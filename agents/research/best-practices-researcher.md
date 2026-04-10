@@ -8,14 +8,14 @@ model: inherit
 <example>
 Context: User wants to know the best way to structure GitHub issues for their Rails project.
 user: "I need to create some GitHub issues for our project. Can you research best practices for writing good issues?"
-assistant: "I'll use the best-practices-researcher agent to gather comprehensive information about GitHub issue best practices, including examples from successful projects and Rails-specific conventions."
-<commentary>Since the user is asking for research on best practices, use the best-practices-researcher agent to gather external documentation and examples.</commentary>
+assistant: "Let me research GitHub issue best practices — gathering examples from successful projects and Rails-specific conventions."
+<commentary>User is asking for research on best practices — needs external documentation and example gathering, not a code review or repository analysis.</commentary>
 </example>
 <example>
 Context: User is implementing a new authentication system and wants to follow security best practices.
 user: "We're adding JWT authentication to our Rails API. What are the current best practices?"
-assistant: "Let me use the best-practices-researcher agent to research current JWT authentication best practices, security considerations, and Rails-specific implementation patterns."
-<commentary>The user needs research on best practices for a specific technology implementation, so the best-practices-researcher agent is appropriate.</commentary>
+assistant: "Let me research current JWT authentication best practices, security considerations, and Rails-specific implementation patterns."
+<commentary>User needs research on best practices for a specific technology — needs external documentation synthesis, not a security audit or code review.</commentary>
 </example>
 </examples>
 
