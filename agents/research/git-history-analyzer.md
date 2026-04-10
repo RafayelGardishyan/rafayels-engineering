@@ -8,14 +8,14 @@ model: inherit
 <example>
 Context: The user wants to understand the history and evolution of recently modified files.
 user: "I've just refactored the authentication module. Can you analyze the historical context?"
-assistant: "I'll use the git-history-analyzer agent to examine the evolution of the authentication module files."
-<commentary>Since the user wants historical context about code changes, use the git-history-analyzer agent to trace file evolution, identify contributors, and extract patterns from the git history.</commentary>
+assistant: "Let me trace the evolution of the authentication module through git history — examining commits, contributors, and refactoring patterns."
+<commentary>User wants historical context about code changes — needs archaeological git analysis, not a code review or architecture assessment.</commentary>
 </example>
 <example>
 Context: The user needs to understand why certain code patterns exist.
 user: "Why does this payment processing code have so many try-catch blocks?"
-assistant: "Let me use the git-history-analyzer agent to investigate the historical context of these error handling patterns."
-<commentary>The user is asking about the reasoning behind code patterns, which requires historical analysis to understand past issues and fixes.</commentary>
+assistant: "Let me investigate the historical context of these error handling patterns through git blame and commit history."
+<commentary>User is asking about the reasoning behind code patterns — needs historical git analysis to understand past issues and fixes, not a code review or pattern analysis.</commentary>
 </example>
 </examples>
 

@@ -1,8 +1,7 @@
 ---
 name: lint
-description: "Use this agent when you need to run linting and code quality checks on Go and TypeScript files. Run before pushing to origin."
-model: haiku
-color: yellow
+description: "Runs linting and code quality checks on Go and TypeScript files. Use before pushing to origin."
+model: inherit
 ---
 
 Your workflow process:

@@ -1,27 +1,27 @@
 ---
 name: learnings-researcher
 description: "Searches docs/solutions/ for relevant past solutions by frontmatter metadata. Use before implementing features or fixing problems to surface institutional knowledge and prevent repeated mistakes."
-model: haiku
+model: inherit
 ---
 
 <examples>
 <example>
 Context: User is about to implement a feature involving email processing.
 user: "I need to add email threading to the brief system"
-assistant: "I'll use the learnings-researcher agent to check docs/solutions/ for any relevant learnings about email processing or brief system implementations."
-<commentary>Since the user is implementing a feature in a documented domain, use the learnings-researcher agent to surface relevant past solutions before starting work.</commentary>
+assistant: "Let me search docs/solutions/ for relevant past learnings about email processing and brief system implementations before we start."
+<commentary>User is implementing a feature in a documented domain — needs institutional knowledge surfaced before starting work, not a code review or implementation task.</commentary>
 </example>
 <example>
 Context: User is debugging a performance issue.
 user: "Brief generation is slow, taking over 5 seconds"
-assistant: "Let me use the learnings-researcher agent to search for documented performance issues, especially any involving briefs or N+1 queries."
-<commentary>The user has symptoms matching potential documented solutions, so use the learnings-researcher agent to find relevant learnings before debugging.</commentary>
+assistant: "Let me search for documented performance issues, especially any involving briefs or N+1 queries, before we start debugging."
+<commentary>User has symptoms matching potential documented solutions — needs institutional knowledge search before debugging, not a performance audit or code review.</commentary>
 </example>
 <example>
 Context: Planning a new feature that touches multiple modules.
 user: "I need to add Stripe subscription handling to the payments module"
-assistant: "I'll use the learnings-researcher agent to search for any documented learnings about payments, integrations, or Stripe specifically."
-<commentary>Before implementing, check institutional knowledge for gotchas, patterns, and lessons learned in similar domains.</commentary>
+assistant: "Let me search for documented learnings about payments, integrations, and Stripe before we start implementing."
+<commentary>Before implementing, check institutional knowledge for gotchas, patterns, and lessons learned — needs knowledge retrieval, not implementation or code review.</commentary>
 </example>
 </examples>
 
@@ -253,6 +253,12 @@ Structure your findings as:
 - Return raw document contents (distill instead)
 - Include tangentially related learnings (focus on relevance)
 - Skip the critical patterns file (always check it)
+
+## Discoverability Verification
+
+After searching `docs/solutions/`, verify that found files are actually reachable from instruction files (CLAUDE.md, skill files, agent descriptions). Flag any orphaned learnings that exist but aren't referenced anywhere — these are institutional knowledge gaps.
+
+Also check for learnings older than 6 months (via `last_validated` field) — flag them as potentially stale and suggest review or archive.
 
 ## Integration Points
 

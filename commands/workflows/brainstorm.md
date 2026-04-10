@@ -35,13 +35,32 @@ Evaluate whether brainstorming is needed based on the feature description.
 **If requirements are already clear:**
 Use **AskUserQuestion tool** to suggest: "Your requirements seem detailed enough to proceed directly to planning. Should I run `/workflows:plan` instead, or would you like to explore the idea further?"
 
+### Phase 0.1b: Task Classification
+
+Determine if this is a software or non-software task.
+
+**Software signals** (any 2+ = software):
+- Keywords: implement, refactor, fix bug, API, endpoint, component, deploy, migrate, test, CI/CD
+- References to files, repos, branches, PRs
+- Mentions specific tech (React, SQL, Docker, etc.)
+
+**Non-software signals** (absence of software signals + any 1):
+- Keywords: plan, organize, schedule, budget, itinerary, strategy, proposal, curriculum, agenda
+- Time-oriented language: dates, deadlines, durations
+- People/logistics: venues, attendees, stakeholders, suppliers
+
+**Classifier rule:** Check software signals first (high precision). Ambiguous cases default to software.
+
+If non-software: load `references/universal-planning.md` and follow that workflow instead.
+
 ### Phase 1: Understand the Idea
 
 #### 1.1 Repository Research (Lightweight)
 
-Run a quick repo scan to understand existing patterns:
+Run a quick repo scan to understand existing patterns. If Obsidian MCP tools are available, also dispatch the vault-researcher in parallel:
 
 - Task repo-research-analyst("Understand existing patterns related to: <feature_description>")
+- Task vault-researcher("Search vault for decisions and context related to: <feature_description>") — conditional: only if obsidian-adr or obsidian MCP is available
 
 Focus on: similar features, established patterns, CLAUDE.md guidance.
 
@@ -74,9 +93,16 @@ Use **AskUserQuestion tool** to ask which approach the user prefers.
 
 Write a brainstorm document to `docs/brainstorms/YYYY-MM-DD-<topic>-brainstorm.md`.
 
-**Document structure:** See the `brainstorming` skill for the template format. Key sections: What We're Building, Why This Approach, Key Decisions, Open Questions.
+**Document structure:** Load `references/brainstorm-phase3.md` for the template format.
 
 Ensure `docs/brainstorms/` directory exists before writing.
+
+### Phase 3.5: Mandatory Document Review
+
+Run structured review on the brainstorm document before handoff:
+
+Load the `document-review` skill and apply it to the brainstorm document just written.
+This is automatic — do not ask for permission.
 
 ### Phase 4: Handoff
 

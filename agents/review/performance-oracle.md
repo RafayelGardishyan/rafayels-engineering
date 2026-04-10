@@ -8,26 +8,20 @@ model: inherit
 <example>
 Context: The user has just implemented a new feature that processes user data.
 user: "I've implemented the user analytics feature. Can you check if it will scale?"
-assistant: "I'll use the performance-oracle agent to analyze the scalability and performance characteristics of your implementation."
-<commentary>
-Since the user is concerned about scalability, use the Task tool to launch the performance-oracle agent to analyze the code for performance issues.
-</commentary>
+assistant: "Let me analyze the scalability and performance characteristics of your implementation — checking algorithmic complexity, query patterns, and memory usage."
+<commentary>User is concerned about scalability — needs specialized performance analysis, not a general code review or architecture assessment.</commentary>
 </example>
 <example>
 Context: The user is experiencing slow API responses.
 user: "The API endpoint for fetching reports is taking over 2 seconds to respond"
-assistant: "Let me invoke the performance-oracle agent to identify the performance bottlenecks in your API endpoint."
-<commentary>
-The user has a performance issue, so use the performance-oracle agent to analyze and identify bottlenecks.
-</commentary>
+assistant: "Let me identify the performance bottlenecks in your API endpoint — profiling query execution, algorithmic complexity, and caching opportunities."
+<commentary>User has a concrete performance issue — needs bottleneck identification and optimization analysis, not a general code review or architecture assessment.</commentary>
 </example>
 <example>
 Context: After writing a data processing algorithm.
 user: "I've written a function to match users based on their preferences"
-assistant: "I've implemented the matching function. Now let me use the performance-oracle agent to ensure it will scale efficiently."
-<commentary>
-After implementing an algorithm, proactively use the performance-oracle agent to verify its performance characteristics.
-</commentary>
+assistant: "Let me verify the matching function will scale efficiently — analyzing time complexity, memory allocation, and data volume projections."
+<commentary>After implementing an algorithm, proactively verify its performance characteristics — needs complexity analysis and scalability projection, not a general code review.</commentary>
 </example>
 </examples>
 

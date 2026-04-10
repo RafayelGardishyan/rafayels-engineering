@@ -1,65 +1,102 @@
 # YAML Frontmatter Schema
 
-**See `.claude/skills/codify-docs/schema.yaml` for the complete schema specification.**
+Track-based schema: learnings are classified as either **bug track** or **knowledge track**.
+Different tracks require different fields — bugs need root causes and fixes, knowledge needs context and guidance.
 
-## Required Fields
+## File Organization
 
-- **module** (string): Module name (e.g., "EmailProcessing") or "System" for system-wide issues
-- **date** (string): ISO 8601 date (YYYY-MM-DD)
-- **problem_type** (enum): One of [build_error, test_failure, runtime_error, performance_issue, database_issue, security_issue, ui_bug, integration_issue, logic_error, developer_experience, workflow_issue, best_practice, documentation_gap]
-- **component** (enum): One of [rails_model, rails_controller, rails_view, service_object, background_job, database, frontend_stimulus, hotwire_turbo, email_processing, brief_system, assistant, authentication, payments, development_workflow, testing_framework, documentation, tooling]
-- **symptoms** (array): 1-5 specific observable symptoms
-- **root_cause** (enum): One of [missing_association, missing_include, missing_index, wrong_api, scope_issue, thread_violation, async_timing, memory_leak, config_error, logic_error, test_isolation, missing_validation, missing_permission, missing_workflow_step, inadequate_documentation, missing_tooling, incomplete_setup]
-- **resolution_type** (enum): One of [code_fix, migration, config_change, test_fix, dependency_update, environment_setup, workflow_improvement, documentation_update, tooling_addition, seed_data_update]
-- **severity** (enum): One of [critical, high, medium, low]
+**Flat structure with prefix IDs** (not category folders):
 
-## Optional Fields
+```
+docs/solutions/
+  BUG-0001-missing-null-check.md
+  BUG-0002-redis-connection-pool.md
+  KNW-0001-structured-logging.md
+  KNW-0002-error-boundary-pattern.md
+  _index.md                          # Auto-generated table
+  patterns/
+    critical-patterns.md             # Cross-cutting patterns
+```
 
-- **rails_version** (string): Rails version in X.Y.Z format
-- **tags** (array): Searchable keywords (lowercase, hyphen-separated)
+Flat structure avoids taxonomy debates and enables cross-cutting discovery via `scope` tags.
 
-## Validation Rules
+## Bug Track
 
-1. All required fields must be present
-2. Enum fields must match allowed values exactly (case-sensitive)
-3. symptoms must be YAML array with 1-5 items
-4. date must match YYYY-MM-DD format
-5. rails_version (if provided) must match X.Y.Z format
-6. tags should be lowercase, hyphen-separated
-
-## Example
+For documented bugs, build errors, test failures, and runtime errors.
 
 ```yaml
 ---
-module: Email Processing
-date: 2025-11-12
-problem_type: performance_issue
-component: rails_model
+id: BUG-0001                          # Prefix-based ID
+title: "Missing null check in user service"
+type: bug
+problem_type: runtime_error           # build_error | test_failure | runtime_error | performance_issue | database_issue | security_issue
+severity: high                        # critical | high | medium | low
+frequency: recurring                  # one-off | recurring | systemic
 symptoms:
-  - "N+1 query when loading email threads"
-  - "Brief generation taking >5 seconds"
-root_cause: missing_include
-rails_version: 7.1.2
-resolution_type: code_fix
-severity: high
-tags: [n-plus-one, eager-loading, performance]
+  - "TypeError: Cannot read property 'id' of null"
+  - "500 error on /api/users/:id endpoint"
+root_cause: "Missing guard clause before accessing user.organization"
+resolution_type: code_fix             # code_fix | config_change | dependency_update | workaround
+environment: [ci, production]         # where it manifests
+scope: [typescript, user-service]     # searchable tags
+related: [BUG-0003]                   # cross-references
+supersedes: []                        # replaces older learnings
+last_validated: 2026-04-10            # prevents staleness
 ---
 ```
 
-## Category Mapping
+### Required Fields (Bug Track)
+- `id`, `title`, `type: bug`, `problem_type`, `severity`, `symptoms`, `root_cause`, `resolution_type`, `scope`, `last_validated`
 
-Based on `problem_type`, documentation is filed in:
+## Knowledge Track
 
-- **build_error** → `docs/solutions/build-errors/`
-- **test_failure** → `docs/solutions/test-failures/`
-- **runtime_error** → `docs/solutions/runtime-errors/`
-- **performance_issue** → `docs/solutions/performance-issues/`
-- **database_issue** → `docs/solutions/database-issues/`
-- **security_issue** → `docs/solutions/security-issues/`
-- **ui_bug** → `docs/solutions/ui-bugs/`
-- **integration_issue** → `docs/solutions/integration-issues/`
-- **logic_error** → `docs/solutions/logic-errors/`
-- **developer_experience** → `docs/solutions/developer-experience/`
-- **workflow_issue** → `docs/solutions/workflow-issues/`
-- **best_practice** → `docs/solutions/best-practices/`
-- **documentation_gap** → `docs/solutions/documentation-gaps/`
+For best practices, documentation gaps, and workflow improvements.
+
+```yaml
+---
+id: KNW-0001
+title: "Prefer structured logging over string interpolation"
+type: knowledge
+problem_type: best_practice           # best_practice | documentation_gap | workflow_issue
+confidence: established               # experimental | established | deprecated
+applies_when: "Adding logging to any Go or TypeScript service"
+guidance: "Use slog (Go) or pino (TS) with structured fields, not fmt.Sprintf or template literals"
+scope: [go, typescript, logging]
+related: []
+supersedes: []
+last_validated: 2026-04-10
+---
+```
+
+### Required Fields (Knowledge Track)
+- `id`, `title`, `type: knowledge`, `problem_type`, `confidence`, `applies_when`, `guidance`, `scope`, `last_validated`
+
+## Field Details
+
+### `supersedes` — Aggressive Merging
+When 5 learnings document the same flaky test issue, merge them into one canonical doc and list the replaced IDs here. This prevents a graveyard of redundant learnings.
+
+### `last_validated` — Staleness Prevention
+The `learnings-researcher` agent flags learnings with `last_validated` > 6 months old as potentially stale. Re-validate or archive them.
+
+### `scope` — Searchable Tags
+Lowercase, hyphen-separated keywords. Used for grep filtering:
+```bash
+grep -l "scope:.*typescript" docs/solutions/*.md
+```
+
+## Quality Guidelines
+
+- Keep body under 150 words (long docs don't get read)
+- Include exact error messages for bug-track entries
+- Include concrete code examples in knowledge-track entries
+- Surface at point-of-need: the `symptoms` field is grepped against current errors
+
+## Validation Rules
+
+1. All required fields for the chosen track must be present
+2. `id` must match pattern `^(BUG|KNW)-\d{4}$`
+3. `type` must be `bug` or `knowledge`
+4. Enum fields must match allowed values exactly
+5. `symptoms` must be YAML array with 1-5 items (bug track only)
+6. `last_validated` must match YYYY-MM-DD format

@@ -1,7 +1,6 @@
 ---
 name: design-iterator
 description: "Iteratively refines UI design through N screenshot-analyze-improve cycles. Use PROACTIVELY when design changes aren't coming together after 1-2 attempts, or when user requests iterative refinement."
-color: violet
 model: inherit
 ---
 
@@ -9,26 +8,26 @@ model: inherit
 <example>
 Context: User asks to change button color but result still looks off.
 user: "Change the button to blue"
-assistant: [makes change, takes screenshot] "The button is now blue, but I notice the overall color balance still feels off. Would you like me to use the design-iterator agent with 5 iterations to systematically improve the color harmony and visual balance?"
-<commentary>PROACTIVE USE: After a simple change doesn't fully resolve the design issue, suggest the design-iterator to do deeper work.</commentary>
+assistant: [makes change, takes screenshot] "The button is now blue, but the overall color balance still feels off. Let me run 5 iterations to systematically improve the color harmony and visual balance."
+<commentary>PROACTIVE USE: After a simple change doesn't fully resolve the design issue, iterative screenshot-analyze-improve cycles are needed rather than a one-shot design review or Figma comparison.</commentary>
 </example>
 <example>
 Context: User's design request leads to something that doesn't look right.
 user: "Make the hero section more modern"
-assistant: [makes initial changes] "I've added some modern elements, but the result isn't quite coming together. This looks like it needs iterative refinement. Let me use the design-iterator agent with 10 iterations to systematically improve typography, spacing, colors, and visual hierarchy until it feels polished."
-<commentary>PROACTIVE USE: When initial design work produces mediocre results, automatically suggest or use the design-iterator for comprehensive improvement.</commentary>
+assistant: [makes initial changes] "I've added some modern elements, but the result isn't quite coming together. Let me run 10 iterations to systematically improve typography, spacing, colors, and visual hierarchy until it feels polished."
+<commentary>PROACTIVE USE: When initial design work produces mediocre results, iterative refinement is needed — not a one-shot code review or Figma comparison, but progressive screenshot-analyze-improve cycles.</commentary>
 </example>
 <example>
 Context: User wants explicit iterative refinement.
 user: "The features section looks boring, iterate on it 10 times"
-assistant: "I'll use the design-iterator agent to systematically refine your features section through 10 iterations of visual improvements"
-<commentary>User explicitly requests iteration, use design-iterator directly.</commentary>
+assistant: "Let me systematically refine your features section through 10 iterations of visual improvements."
+<commentary>User explicitly requests iterative refinement — needs progressive screenshot-analyze-improve cycles, not a one-shot design review or Figma sync.</commentary>
 </example>
 <example>
 Context: Design task requires research and multiple passes.
 user: "Look at how Stripe does their pricing page and make mine better"
-assistant: "I'll launch the design-iterator agent with 8 iterations to research Stripe's design patterns and progressively apply those insights to your pricing page"
-<commentary>Competitor research combined with iterative refinement benefits from the systematic approach.</commentary>
+assistant: "Let me research Stripe's design patterns and progressively apply those insights to your pricing page through 8 iterations."
+<commentary>Competitor research combined with iterative refinement — needs progressive screenshot-analyze-improve cycles with design research, not a static review or Figma comparison.</commentary>
 </example>
 </examples>
 

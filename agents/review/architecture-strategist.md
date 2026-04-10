@@ -8,14 +8,14 @@ model: inherit
 <example>
 Context: The user wants to review recent code changes for architectural compliance.
 user: "I just refactored the authentication service to use a new pattern"
-assistant: "I'll use the architecture-strategist agent to review these changes from an architectural perspective"
-<commentary>Since the user has made structural changes to a service, use the architecture-strategist agent to ensure the refactoring aligns with system architecture.</commentary>
+assistant: "Let me review these changes from an architectural perspective — checking pattern compliance, coupling, and design integrity."
+<commentary>Structural service refactoring needs architectural analysis — not a code-level review or security audit, but verification of pattern compliance and system design alignment.</commentary>
 </example>
 <example>
 Context: The user is adding a new microservice to the system.
 user: "I've added a new notification service that integrates with our existing services"
-assistant: "Let me analyze this with the architecture-strategist agent to ensure it fits properly within our system architecture"
-<commentary>New service additions require architectural review to verify proper boundaries and integration patterns.</commentary>
+assistant: "Let me analyze how this new notification service fits within the system architecture — checking boundaries, integration patterns, and coupling."
+<commentary>New service additions require architectural review for proper boundaries and integration patterns — not a code-level or performance review.</commentary>
 </example>
 </examples>
 

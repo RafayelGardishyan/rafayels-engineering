@@ -8,14 +8,14 @@ model: inherit
 <example>
 Context: The user has reported a potential bug in the application.
 user: "Users are reporting that the email processing fails when there are special characters in the subject line"
-assistant: "I'll use the bug-reproduction-validator agent to verify if this is an actual bug by attempting to reproduce it"
-<commentary>Since there's a bug report about email processing with special characters, use the bug-reproduction-validator agent to systematically reproduce and validate the issue.</commentary>
+assistant: "Let me systematically reproduce this issue to verify whether it's an actual bug or expected behavior."
+<commentary>Bug report about runtime behavior — needs systematic reproduction and validation rather than a code review or architecture analysis.</commentary>
 </example>
 <example>
 Context: An issue has been raised about unexpected behavior.
 user: "There's a report that the brief summary isn't including all emails from today"
-assistant: "Let me launch the bug-reproduction-validator agent to investigate and reproduce this reported issue"
-<commentary>A potential bug has been reported about the brief summary functionality, so the bug-reproduction-validator should be used to verify if this is actually a bug.</commentary>
+assistant: "Let me investigate and attempt to reproduce this reported issue to determine if it's a genuine bug."
+<commentary>Reported behavioral anomaly requires hands-on reproduction — not a code review or performance analysis, but an active verification workflow.</commentary>
 </example>
 </examples>
 

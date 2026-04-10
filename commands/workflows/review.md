@@ -59,24 +59,53 @@ The following paths are compound-engineering pipeline artifacts and must never b
 If a review agent flags any file in these directories for cleanup or removal, discard that finding during synthesis. Do not create a todo for it.
 </protected_artifacts>
 
+#### Step 0.5: Detect Tech Stack
+
+Before dispatching reviewers, detect the tech stack from the diff:
+
+1. Run `git diff --name-only base...head` (or `gh pr diff --name-only`)
+2. Categorize files by extension:
+
+| Extensions | Language | Reviewers |
+|---|---|---|
+| `.go`, `.mod`, `.sum` | Go | chi-reviewer, rafayel-go-reviewer |
+| `.ts`, `.tsx`, `.mts` | TypeScript | rafayel-typescript-reviewer |
+| `.svelte` | SvelteKit | rafayel-sveltekit-reviewer |
+| `.py`, `.pyi` | Python | rafayel-python-reviewer |
+| `.sql`, migration files | Database | data-migration-expert, schema-drift-detector |
+| `.css`, `.scss` | Frontend | julik-frontend-races-reviewer |
+| `Dockerfile`, `.tf`, `.yaml` in infra/ | DevOps | deployment-verification-agent |
+
+3. Framework detection (selective config inspection):
+   - Go files → check `go.mod` for chi/gin/fiber
+   - TS files → check for `svelte.config.*` or `next.config.*`
+   - Python → check `pyproject.toml` for fastapi/django
+
+4. Mixed-stack PRs: union all matched reviewers
+
 #### Parallel Agents to review the PR:
 
 <parallel_tasks>
 
-Run ALL or most of these agents at the same time:
+**Always-run agents** (regardless of stack):
 
-1. Task rafayel-go-reviewer(PR content)
-2. Task chi-reviewer(PR title)
-3. Task git-history-analyzer(PR content)
-4. Task dependency-detective(PR content)
-5. Task pattern-recognition-specialist(PR content)
-6. Task architecture-strategist(PR content)
-7. Task code-philosopher(PR content)
-8. Task security-sentinel(PR content)
-9. Task performance-oracle(PR content)
-10. Task devops-harmony-analyst(PR content)
-11. Task data-integrity-guardian(PR content)
-12. Task agent-native-reviewer(PR content) - Verify new features are agent-accessible
+1. Task security-sentinel(PR content)
+2. Task architecture-strategist(PR content)
+3. Task performance-oracle(PR content)
+4. Task pattern-recognition-specialist(PR content)
+5. Task agent-native-reviewer(PR content) - Verify new features are agent-accessible
+6. Task git-history-analyzer(PR content)
+
+**Stack-conditional agents** (only dispatch if matching files are in the diff):
+
+7. Task rafayel-go-reviewer(PR content) — if .go files present
+8. Task chi-reviewer(PR content) — if go.mod contains chi
+9. Task rafayel-typescript-reviewer(PR content) — if .ts/.tsx files present
+10. Task rafayel-sveltekit-reviewer(PR content) — if .svelte files present
+11. Task rafayel-python-reviewer(PR content) — if .py files present
+12. Task data-integrity-guardian(PR content) — if .sql or migration files present
+13. Task julik-frontend-races-reviewer(PR content) — if .js/.ts frontend files present
+14. Task cli-agent-readiness-reviewer(PR content) — if CLI commands added/modified
 
 </parallel_tasks>
 

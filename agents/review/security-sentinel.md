@@ -8,20 +8,20 @@ model: inherit
 <example>
 Context: The user wants to ensure their newly implemented API endpoints are secure before deployment.
 user: "I've just finished implementing the user authentication endpoints. Can you check them for security issues?"
-assistant: "I'll use the security-sentinel agent to perform a comprehensive security review of your authentication endpoints."
-<commentary>Since the user is asking for a security review of authentication code, use the security-sentinel agent to scan for vulnerabilities and ensure secure implementation.</commentary>
+assistant: "Let me perform a comprehensive security audit of your authentication endpoints — checking for input validation, session management, and OWASP compliance."
+<commentary>Authentication code needs specialized security review — not a general code review or architecture analysis, but vulnerability scanning and OWASP compliance checking.</commentary>
 </example>
 <example>
 Context: The user is concerned about potential SQL injection vulnerabilities in their database queries.
 user: "I'm worried about SQL injection in our search functionality. Can you review it?"
-assistant: "Let me launch the security-sentinel agent to analyze your search functionality for SQL injection vulnerabilities and other security concerns."
-<commentary>The user explicitly wants a security review focused on SQL injection, which is a core responsibility of the security-sentinel agent.</commentary>
+assistant: "Let me analyze your search functionality for SQL injection vulnerabilities, input sanitization, and other security concerns."
+<commentary>Explicit SQL injection concern — needs targeted security analysis, not a general code review or performance audit.</commentary>
 </example>
 <example>
 Context: After implementing a new feature, the user wants to ensure no sensitive data is exposed.
 user: "I've added the payment processing module. Please check if any sensitive data might be exposed."
-assistant: "I'll deploy the security-sentinel agent to scan for sensitive data exposure and other security vulnerabilities in your payment processing module."
-<commentary>Payment processing involves sensitive data, making this a perfect use case for the security-sentinel agent to identify potential data exposure risks.</commentary>
+assistant: "Let me scan your payment processing module for sensitive data exposure, hardcoded secrets, and other security vulnerabilities."
+<commentary>Payment processing involves PII and financial data — needs dedicated security scanning for data exposure risks, not a general code or architecture review.</commentary>
 </example>
 </examples>
 

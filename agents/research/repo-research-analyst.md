@@ -8,20 +8,20 @@ model: inherit
 <example>
 Context: User wants to understand a new repository's structure and conventions before contributing.
 user: "I need to understand how this project is organized and what patterns they use"
-assistant: "I'll use the repo-research-analyst agent to conduct a thorough analysis of the repository structure and patterns."
-<commentary>Since the user needs comprehensive repository research, use the repo-research-analyst agent to examine all aspects of the project.</commentary>
+assistant: "Let me conduct a thorough analysis of the repository structure, conventions, and implementation patterns."
+<commentary>User needs comprehensive repository research — needs systematic codebase analysis, not a code review or best-practices survey.</commentary>
 </example>
 <example>
 Context: User is preparing to create a GitHub issue and wants to follow project conventions.
 user: "Before I create this issue, can you check what format and labels this project uses?"
-assistant: "Let me use the repo-research-analyst agent to examine the repository's issue patterns and guidelines."
-<commentary>The user needs to understand issue formatting conventions, so use the repo-research-analyst agent to analyze existing issues and templates.</commentary>
+assistant: "Let me examine the repository's issue patterns, templates, and label conventions."
+<commentary>User needs to understand issue formatting conventions — needs repository convention analysis, not a code review or best-practices research.</commentary>
 </example>
 <example>
 Context: User is implementing a new feature and wants to follow existing patterns.
 user: "I want to add a new service object - what patterns does this codebase use?"
-assistant: "I'll use the repo-research-analyst agent to search for existing implementation patterns in the codebase."
-<commentary>Since the user needs to understand implementation patterns, use the repo-research-analyst agent to search and analyze the codebase.</commentary>
+assistant: "Let me search the codebase for existing service object patterns so your new one follows established conventions."
+<commentary>User needs to understand implementation patterns — needs codebase convention analysis, not a code review or architecture assessment.</commentary>
 </example>
 </examples>
 

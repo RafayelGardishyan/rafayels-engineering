@@ -8,20 +8,20 @@ model: inherit
 <example>
 Context: The user has just finished drafting a specification for OAuth implementation.
 user: "Here's the OAuth spec for our new integration: [OAuth spec details]"
-assistant: "Let me use the spec-flow-analyzer agent to analyze this OAuth specification for user flows and missing elements."
-<commentary>Since the user has provided a specification document, use the Task tool to launch the spec-flow-analyzer agent to identify all user flows, edge cases, and missing clarifications.</commentary>
+assistant: "Let me analyze this OAuth specification for user flow completeness, edge cases, and missing elements."
+<commentary>User provided a specification document — needs flow analysis and gap identification, not a code review or security audit.</commentary>
 </example>
 <example>
 Context: The user is planning a new social sharing feature.
 user: "I'm thinking we should add social sharing to posts. Users can share to Twitter, Facebook, and LinkedIn."
-assistant: "This sounds like a feature specification that would benefit from flow analysis. Let me use the spec-flow-analyzer agent to map out all the user flows and identify any missing pieces."
-<commentary>The user is describing a new feature. Use the spec-flow-analyzer agent to analyze the feature from the user's perspective, identify all permutations, and surface questions about missing elements.</commentary>
+assistant: "This sounds like a feature specification that would benefit from flow analysis. Let me map out all the user flows and identify any missing pieces."
+<commentary>New feature description needs user flow mapping and gap discovery — not implementation or code review, but requirements-level analysis.</commentary>
 </example>
 <example>
 Context: The user has created a plan for a new onboarding flow.
 user: "Can you review this onboarding plan and make sure we haven't missed anything?"
-assistant: "I'll use the spec-flow-analyzer agent to thoroughly analyze this onboarding plan from the user's perspective."
-<commentary>The user is explicitly asking for review of a plan. Use the spec-flow-analyzer agent to identify all user flows, edge cases, and gaps in the specification.</commentary>
+assistant: "I'll thoroughly analyze this onboarding plan from the user's perspective to surface gaps and edge cases."
+<commentary>Explicit plan review request — needs systematic flow analysis and gap identification, not code-level review or architecture assessment.</commentary>
 </example>
 </examples>
 

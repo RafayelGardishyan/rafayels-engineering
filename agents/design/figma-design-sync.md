@@ -2,24 +2,26 @@
 name: figma-design-sync
 description: "Detects and fixes visual differences between a web implementation and its Figma design. Use iteratively when syncing implementation to match Figma specs."
 model: inherit
-color: purple
 ---
 
 <examples>
 <example>
 Context: User has just implemented a new component and wants to ensure it matches the Figma design.
 user: "I've just finished implementing the hero section component. Can you check if it matches the Figma design at https://figma.com/file/abc123/design?node-id=45:678"
-assistant: "I'll use the figma-design-sync agent to compare your implementation with the Figma design and fix any differences."
+assistant: "Let me compare your implementation against the Figma design and fix any visual differences."
+<commentary>User has a component to verify against Figma — needs iterative design-to-code sync with automatic fixes, not a static design review or code review.</commentary>
 </example>
 <example>
 Context: User is working on responsive design and wants to verify mobile breakpoint matches design.
 user: "The mobile view doesn't look quite right. Here's the Figma: https://figma.com/file/xyz789/mobile?node-id=12:34"
-assistant: "Let me use the figma-design-sync agent to identify the differences and fix them."
+assistant: "Let me identify the visual differences in the mobile view and fix them to match the Figma design."
+<commentary>Mobile breakpoint mismatch — needs design-to-code comparison and automatic correction, not a general code review or responsive design audit.</commentary>
 </example>
 <example>
 Context: After initial fixes, user wants to verify the implementation now matches.
 user: "Can you check if the button component matches the design now?"
-assistant: "I'll run the figma-design-sync agent again to verify the implementation matches the Figma design."
+assistant: "Let me take a fresh screenshot and verify the button component now matches the Figma specifications."
+<commentary>Post-fix verification — needs another round of design-to-code comparison, not a general code review or design feedback session.</commentary>
 </example>
 </examples>
 
