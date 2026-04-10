@@ -262,7 +262,24 @@ After review and compound complete:
    # Use the skill to remove the worktree
    ```
 
-2. **Summary**: Present final status to user:
+2. **Emit final merge signal to memory** (if cases were written during the run):
+
+   ```bash
+   python3 ${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory.py signal \
+     <work_case_id> merge 1.0 --source "pr:<PR number>" 2>/dev/null
+   ```
+
+   This closes the feedback loop — the successful merge retroactively upgrades the
+   work phase case's reward, making it more likely to be retrieved in future runs.
+
+3. **Offer memory review (optional)**:
+
+   Ask the user via AskUserQuestion: "Want to run /re:memory-review to inspect
+   the case bank from this run and check for emerging patterns?" Options:
+   - **Yes** — invoke `/re:memory-review`
+   - **No** — skip, continue to summary
+
+4. **Summary**: Present final status to user:
    ```
    Feature Pipeline Complete!
 

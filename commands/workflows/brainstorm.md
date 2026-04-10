@@ -53,6 +53,19 @@ Determine if this is a software or non-software task.
 
 If non-software: load `references/universal-planning.md` and follow that workflow instead.
 
+### Phase 0.5: Retrieve Relevant Cases from Memory
+
+Before starting research, query the memory layer for relevant past brainstorm cases:
+
+```bash
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory.py query \
+  "<feature description>" --phase brainstorm --k 3 --format md 2>/dev/null
+```
+
+- If the command returns markdown-formatted cases on stdout, include them in the phase context.
+- If it exits with code 75 (memory unavailable) or returns nothing, continue without injection.
+- Note any case_ids returned for cross-phase dedup and later signal emission.
+
 ### Phase 1: Understand the Idea
 
 #### 1.1 Repository Research (Lightweight)
@@ -103,6 +116,40 @@ Run structured review on the brainstorm document before handoff:
 
 Load the `document-review` skill and apply it to the brainstorm document just written.
 This is automatic — do not ask for permission.
+
+### Phase 3.6: Capture Case to Memory
+
+After the brainstorm document is written and reviewed, capture it as a case:
+
+```bash
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory.py write \
+  --phase brainstorm \
+  --type decision \
+  --query "<feature description>" \
+  --title "<short brainstorm title>" \
+  --plan "<chosen approach summary>" \
+  --outcome "<brainstorm document path>" \
+  --tags '["brainstorm"]' \
+  --json 2>/dev/null
+```
+
+Capture the returned `case_id` for signal emission in Phase 4.
+
+### Phase 3.7: Emit Approval Signal
+
+If the user approved the brainstorm (selected "Proceed to planning"), emit a positive signal:
+
+```bash
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory.py signal \
+  <case_id> approval 1.0 --source "phase:brainstorm" 2>/dev/null
+```
+
+If they requested substantial rework, emit a mildly negative signal instead:
+
+```bash
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory.py signal \
+  <case_id> approval -0.3 --source "phase:brainstorm-rework" 2>/dev/null
+```
 
 ### Phase 4: Handoff
 

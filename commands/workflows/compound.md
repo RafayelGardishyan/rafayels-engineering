@@ -21,6 +21,17 @@ Captures problem solutions while context is fresh, creating structured documenta
 /workflows:compound [brief context]    # Provide additional context hint
 ```
 
+## Phase 0.5: Retrieve Similar Past Solutions from Memory
+
+Before dispatching research subagents, query memory for similar solved problems:
+
+```bash
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory.py query \
+  "<problem description>" --phase compound --k 3 --format md 2>/dev/null
+```
+
+If similar past solutions are retrieved, mention them in the synthesis (don't duplicate work). Exit 75 = continue without.
+
 ## Execution Strategy: Two-Phase Orchestration
 
 <critical_requirement>
@@ -171,7 +182,34 @@ File created:
 
 This documentation will be searchable for future reference when similar
 issues occur in the Email Processing or Brief System modules.
+```
 
+## Phase 4: Capture to Memory
+
+After the solution document is written, also capture the compound event to memory:
+
+```bash
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory.py write \
+  --phase compound \
+  --type solution \
+  --query "<problem description>" \
+  --title "<short title from solution doc>" \
+  --plan "<root cause + solution summary>" \
+  --outcome "<solution doc path>" \
+  --tags "<JSON array with scope/tags from frontmatter>" \
+  --json 2>/dev/null
+```
+
+Compound events get automatic approval signals since they represent confirmed solutions:
+
+```bash
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory.py signal \
+  <case_id> approval 1.0 --source "phase:compound" 2>/dev/null
+```
+
+After capture, present next steps:
+
+```
 What's next?
 1. Continue workflow (recommended)
 2. Link related documentation

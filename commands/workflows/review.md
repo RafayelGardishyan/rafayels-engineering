@@ -59,6 +59,17 @@ The following paths are compound-engineering pipeline artifacts and must never b
 If a review agent flags any file in these directories for cleanup or removal, discard that finding during synthesis. Do not create a todo for it.
 </protected_artifacts>
 
+#### Step 0.4: Retrieve Relevant Cases from Memory
+
+Before dispatching reviewers, query memory for relevant past review cases:
+
+```bash
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory.py query \
+  "<PR title or change summary>" --phase review --k 3 --format md 2>/dev/null
+```
+
+If cases are returned, include them as context for the reviewer agents. Past failure cases flagged here are anti-patterns to watch for. Exit 75 or empty output = proceed without injection.
+
 #### Step 0.5: Detect Tech Stack
 
 Before dispatching reviewers, detect the tech stack from the diff:
@@ -376,6 +387,37 @@ Examples:
 #### Step 3: Summary Report
 
 After creating all todo files, present comprehensive summary:
+
+### After Synthesis: Capture Case and Emit Signals
+
+After the summary report is generated, capture the review outcome to memory:
+
+```bash
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory.py write \
+  --phase review \
+  --type pattern \
+  --query "<PR title>" \
+  --title "Review of <PR title>" \
+  --plan "<reviewers dispatched>" \
+  --outcome "P1=<count>, P2=<count>, P3=<count>" \
+  --tags "<JSON array with stack tags>" \
+  --json 2>/dev/null
+```
+
+Then emit a `review` signal based on severity:
+- No findings → `review 1.0`
+- Only P3 findings → `review 0.5`
+- Any P2 → `review -0.3`
+- Any P1 → `review -1.0`
+
+```bash
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory.py signal \
+  <review_case_id> review <score> --source "phase:review" 2>/dev/null
+```
+
+Also emit a signal against the matching `/workflows:work` case (if you can find it by title similarity via `memory query`):
+- If P1 findings, the work case gets `review -1.0`
+- If none, the work case gets `review 1.0`
 
 ````markdown
 ## ✅ Code Review Complete
