@@ -164,8 +164,10 @@ def cmd_query(args) -> int:
     from db import connect
     from retrieve import format_for_injection, query as retrieve_query, results_to_json
 
+    # Note: query writes to `retrievals` table for cap-penalty tracking,
+    # so we need a read-write connection, not readonly.
     try:
-        conn = connect(readonly=True)
+        conn = connect()
     except ImportError as exc:
         _emit_error(f"deps: {exc}", "deps_missing", as_json=args.json)
         return EXIT_UNAVAILABLE

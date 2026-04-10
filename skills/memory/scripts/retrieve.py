@@ -308,17 +308,20 @@ def _log_retrievals(
     """Append entries to the retrievals audit table."""
     if not results:
         return
+    from db import write_transaction
+
     timestamp = now()
-    conn.executemany(
-        """
-        INSERT INTO retrievals (case_id, phase, workflow_run_id, distance, rank, created)
-        VALUES (?, ?, ?, ?, ?, ?)
-        """,
-        [
-            (r.case.case_id, phase, workflow_run_id, r.distance, r.rank, timestamp)
-            for r in results
-        ],
-    )
+    with write_transaction(conn):
+        conn.executemany(
+            """
+            INSERT INTO retrievals (case_id, phase, workflow_run_id, distance, rank, created)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            [
+                (r.case.case_id, phase, workflow_run_id, r.distance, r.rank, timestamp)
+                for r in results
+            ],
+        )
 
 
 # ---------------------------------------------------------------------------
