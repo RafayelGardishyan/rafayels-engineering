@@ -1,0 +1,11 @@
+# Core runtime dependencies for the memory layer.
+# Pinned exactly where instability is known (sqlite-vec is 0.x).
+
+sqlite-vec==0.1.7
+fastembed==0.4.2
+numpy>=1.26,<3.0
+pyyaml>=6.0
+
+# Optional but recommended: accurate token counting for injection_summary cap.
+# If missing, falls back to word-count estimate.
+tiktoken>=0.7.0
