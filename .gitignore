@@ -1,1 +1,7 @@
 __pycache__/
+.worktrees
+
+# OpenCode (cache only - skills/commands are tracked)
+.opencode/cache/
+.opencode/node_modules/
+
