@@ -115,7 +115,9 @@ def _cmd_init(args: argparse.Namespace) -> int:
             ) from exc
         print(result["path_written"])
         return 0
-    wizard.run_interactive()
+    result = wizard.run_interactive(force=args.force)
+    if result.get("skipped"):
+        return 0
     return 0
 
 
