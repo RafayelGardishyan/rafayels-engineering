@@ -13,9 +13,24 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 PROJECT_CONFIG="${PLUGIN_ROOT}/skills/project-config/scripts/project-config"
-CONFIG_YAML="${PLUGIN_ROOT}/.rafayels/config.yaml"
-LOCAL_YAML="${PLUGIN_ROOT}/.rafayels/config.local.yaml"
-GITIGNORE="${PLUGIN_ROOT}/.gitignore"
+
+# Discover the project root the way the resolver does: walk upward from
+# $PWD looking for .rafayels/. If found, run checks against that project.
+# Otherwise fall back to the plugin root (dev-time use case: running
+# bin/doctor from inside the plugin checkout itself).
+find_project_root() {
+  local d="${PWD}"
+  while [[ "${d}" != "/" ]]; do
+    [[ -d "${d}/.rafayels" ]] && { echo "${d}"; return; }
+    d="$(dirname "${d}")"
+  done
+  echo "${PLUGIN_ROOT}"
+}
+PROJECT_ROOT="$(find_project_root)"
+
+CONFIG_YAML="${PROJECT_ROOT}/.rafayels/config.yaml"
+LOCAL_YAML="${PROJECT_ROOT}/.rafayels/config.local.yaml"
+GITIGNORE="${PROJECT_ROOT}/.gitignore"
 
 errors=0
 warnings=0
@@ -25,10 +40,11 @@ pass() { say "PASS" "$1"; }
 warn() { say "WARN" "$1"; warnings=$((warnings + 1)); }
 fail() { say "FAIL" "$1"; errors=$((errors + 1)); }
 
-echo "Checking rafayels-engineering at ${PLUGIN_ROOT}"
+echo "Plugin: ${PLUGIN_ROOT}"
+echo "Project: ${PROJECT_ROOT}"
 echo
 
-cd "${PLUGIN_ROOT}"
+cd "${PROJECT_ROOT}"
 
 # Config file ------------------------------------------------------------
 if [[ ! -f "${CONFIG_YAML}" ]]; then
