@@ -14,7 +14,7 @@ prune low-value cases, and review detected patterns for possible skill updates.
 The memory layer must be initialized. If you haven't run `memory init`, do that first:
 
 ```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory.py init
+${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory init
 ```
 
 ## Execution Flow
@@ -24,7 +24,7 @@ python3 ${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory.py init
 Start with a doctor check to verify the memory layer is healthy:
 
 ```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory.py doctor --json
+${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory doctor --json
 ```
 
 If `status` is `unavailable`, stop here and tell the user to install dependencies per the reported `fix` hints.
@@ -32,7 +32,7 @@ If `status` is `unavailable`, stop here and tell the user to install dependencie
 ### Step 2: Show Statistics
 
 ```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory.py report --stats
+${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory report --stats
 ```
 
 Display the output to the user. Key things to highlight:
@@ -43,7 +43,7 @@ Display the output to the user. Key things to highlight:
 ### Step 3: Surface Stale Cases
 
 ```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory.py report --stale --older-than 90 --json
+${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory report --stale --older-than 90 --json
 ```
 
 If there are stale cases, ask the user via AskUserQuestion whether to prune:
@@ -53,7 +53,7 @@ If there are stale cases, ask the user via AskUserQuestion whether to prune:
 
 For confirmed prune:
 ```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory.py prune --confirm --reward-below 0.3 --older-than 90
+${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory prune --confirm --reward-below 0.3 --older-than 90
 ```
 
 ### Step 4: Inspect Detected Patterns
@@ -84,13 +84,13 @@ Display the generated PR URL.
 If the user wants to inspect a specific case:
 
 ```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory.py read <case_id> --json
+${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory read <case_id> --json
 ```
 
 To promote an important case (pin it so it's never auto-archived):
 
 ```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory.py promote <case_id>
+${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory promote <case_id>
 ```
 
 To hard-delete a bad case:
@@ -98,7 +98,7 @@ To hard-delete a bad case:
 ```bash
 # First get the confirmation token
 TOKEN=$(python3 -c "import hashlib; print(hashlib.sha256(b'delete:<case_id>').hexdigest()[:8])")
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory.py delete <case_id> --confirm-token $TOKEN
+${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory delete <case_id> --confirm-token $TOKEN
 ```
 
 ## Summary

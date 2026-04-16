@@ -26,7 +26,7 @@ penalty logic apply uniformly.
 At the start of a phase:
 
 ```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory.py query \
+${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory query \
   "<query text>" --phase <phase_name> --k 3 --format md 2>/dev/null
 ```
 
@@ -38,7 +38,7 @@ python3 ${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory.py query \
 At the end of a phase (capture):
 
 ```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory.py write \
+${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory write \
   --phase <phase_name> \
   --query "<feature description>" \
   --title "<short title>" \
@@ -53,7 +53,7 @@ Capture the returned `case_id` for signal emission.
 At event moments (signals):
 
 ```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory.py signal \
+${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory signal \
   <case_id> <type> <value> --source "<source>"
 ```
 

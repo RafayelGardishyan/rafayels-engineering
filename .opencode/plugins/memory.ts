@@ -1,6 +1,5 @@
 import type { Plugin } from "@opencode-ai/plugin"
 
-const PY = "/opt/homebrew/bin/python3.12"
 const PLUGIN_BASE = `${process.env.HOME}/.claude/plugins/cache/rafayels-marketplace/rafayels-engineering`
 
 function resolveMemoryScript(): string | null {
@@ -9,7 +8,7 @@ function resolveMemoryScript(): string | null {
     if (dirs.length === 0) return null
     dirs.sort()
     const latest = dirs[dirs.length - 1]
-    const mem = `${latest}skills/memory/scripts/memory.py`
+    const mem = `${latest}skills/memory/scripts/memory`
     if (Bun.file(mem).size > 0) return mem
     return null
   } catch {
@@ -64,7 +63,7 @@ export const MemoryPlugin: Plugin = async ({ client }) => {
       if (!query) return
 
       try {
-        const proc = Bun.spawn([PY, MEM, "query", query, "--phase", phase, "--k", "3", "--format", "md"], {
+        const proc = Bun.spawn([MEM, "query", query, "--phase", phase, "--k", "3", "--format", "md"], {
           stdout: "pipe",
           stderr: "pipe",
         })
@@ -94,7 +93,7 @@ export const MemoryPlugin: Plugin = async ({ client }) => {
       try {
         // Write case
         const writeProc = Bun.spawn(
-          [PY, MEM, "--json", "write", "--phase", phase, "--type", type, "--title", title, "--query", query, "--tags", `["${phase}","auto-captured"]`],
+          [MEM, "--json", "write", "--phase", phase, "--type", type, "--title", title, "--query", query, "--tags", `["${phase}","auto-captured"]`],
           { stdout: "pipe", stderr: "pipe" }
         )
         const writeResult = await new Response(writeProc.stdout).text()
@@ -111,7 +110,7 @@ export const MemoryPlugin: Plugin = async ({ client }) => {
         if (caseId) {
           // Emit approval signal (fire-and-forget)
           Bun.spawn(
-            [PY, MEM, "signal", String(caseId), "approval", "1.0", "--source", "hook:post-skill"],
+            [MEM, "signal", String(caseId), "approval", "1.0", "--source", "hook:post-skill"],
             { stdout: "ignore", stderr: "ignore" }
           )
         }

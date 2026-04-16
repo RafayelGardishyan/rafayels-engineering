@@ -3,21 +3,21 @@
 # Fires before every Skill invocation. If the skill is a workflow phase,
 # queries the memory bank and injects retrieved cases as additionalContext.
 #
-# Requires: /opt/homebrew/bin/python3.12 with sqlite-vec + fastembed installed
+# Requires: a Python 3.10-3.12 with sqlite-vec + fastembed installed. The
+# `memory` wrapper picks a capable interpreter automatically.
 # Graceful degradation: if memory CLI fails, outputs nothing (hook is a no-op)
 
 set -euo pipefail
 
-PY="/opt/homebrew/bin/python3.12"
 # Resolve the latest installed plugin version dynamically
 PLUGIN_BASE="$HOME/.claude/plugins/cache/rafayels-marketplace/rafayels-engineering"
 PLUGIN_DIR=$(ls -d "$PLUGIN_BASE"/*/ 2>/dev/null | sort -V | tail -1)
 if [[ -z "$PLUGIN_DIR" ]]; then
   exit 0  # plugin not installed
 fi
-MEM="$PLUGIN_DIR/skills/memory/scripts/memory.py"
+MEM="$PLUGIN_DIR/skills/memory/scripts/memory"
 
-if [[ ! -f "$MEM" ]]; then
+if [[ ! -x "$MEM" ]]; then
   exit 0  # memory skill not present in this version
 fi
 
@@ -53,7 +53,7 @@ fi
 QUERY="${QUERY:0:500}"
 
 # Run memory query — capture stdout, suppress stderr
-CASES=$("$PY" "$MEM" query "$QUERY" --phase "$PHASE" --k 3 --format md 2>/dev/null) || true
+CASES=$("$MEM" query "$QUERY" --phase "$PHASE" --k 3 --format md 2>/dev/null) || true
 
 if [[ -z "$CASES" ]]; then
   exit 0  # no cases retrieved (cold start, deps missing, or empty bank)

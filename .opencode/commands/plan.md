@@ -88,7 +88,7 @@ Refine the idea through collaborative dialogue using the **AskUserQuestion tool*
 Before local research, query the memory layer for relevant plan-phase cases:
 
 ```bash
-python3 ${OPENCODE_PLUGIN_ROOT}/skills/memory/scripts/memory.py query \
+${OPENCODE_PLUGIN_ROOT}/skills/memory/scripts/memory query \
   "<feature description>" --phase plan --k 3 --format md 2>/dev/null
 ```
 
@@ -293,7 +293,7 @@ Load the `document-review` skill and apply it to the plan document just written.
 After document review, capture the plan as a memory case:
 
 ```bash
-python3 ${OPENCODE_PLUGIN_ROOT}/skills/memory/scripts/memory.py write \
+${OPENCODE_PLUGIN_ROOT}/skills/memory/scripts/memory write \
   --phase plan \
   --type decision \
   --query "<feature description>" \
@@ -307,14 +307,14 @@ python3 ${OPENCODE_PLUGIN_ROOT}/skills/memory/scripts/memory.py write \
 If document-review required substantial changes, emit a review signal:
 
 ```bash
-python3 ${OPENCODE_PLUGIN_ROOT}/skills/memory/scripts/memory.py signal \
+${OPENCODE_PLUGIN_ROOT}/skills/memory/scripts/memory signal \
   <case_id> review -0.3 --source "phase:plan-review" 2>/dev/null
 ```
 
 Otherwise emit a positive review signal:
 
 ```bash
-python3 ${OPENCODE_PLUGIN_ROOT}/skills/memory/scripts/memory.py signal \
+${OPENCODE_PLUGIN_ROOT}/skills/memory/scripts/memory signal \
   <case_id> review 1.0 --source "phase:plan-review" 2>/dev/null
 ```
 

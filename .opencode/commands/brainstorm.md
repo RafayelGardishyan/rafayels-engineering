@@ -57,7 +57,7 @@ If non-software: load `references/universal-planning.md` and follow that workflo
 Before starting research, query the memory layer for relevant past brainstorm cases:
 
 ```bash
-python3 ${OPENCODE_PLUGIN_ROOT}/skills/memory/scripts/memory.py query \
+${OPENCODE_PLUGIN_ROOT}/skills/memory/scripts/memory query \
   "<feature description>" --phase brainstorm --k 3 --format md 2>/dev/null
 ```
 
@@ -121,7 +121,7 @@ This is automatic — do not ask for permission.
 After the brainstorm document is written and reviewed, capture it as a case:
 
 ```bash
-python3 ${OPENCODE_PLUGIN_ROOT}/skills/memory/scripts/memory.py write \
+${OPENCODE_PLUGIN_ROOT}/skills/memory/scripts/memory write \
   --phase brainstorm \
   --type decision \
   --query "<feature description>" \
@@ -139,14 +139,14 @@ Capture the returned `case_id` for signal emission in Phase 4.
 If the user approved the brainstorm (selected "Proceed to planning"), emit a positive signal:
 
 ```bash
-python3 ${OPENCODE_PLUGIN_ROOT}/skills/memory/scripts/memory.py signal \
+${OPENCODE_PLUGIN_ROOT}/skills/memory/scripts/memory signal \
   <case_id> approval 1.0 --source "phase:brainstorm" 2>/dev/null
 ```
 
 If they requested substantial rework, emit a mildly negative signal instead:
 
 ```bash
-python3 ${OPENCODE_PLUGIN_ROOT}/skills/memory/scripts/memory.py signal \
+${OPENCODE_PLUGIN_ROOT}/skills/memory/scripts/memory signal \
   <case_id> approval -0.3 --source "phase:brainstorm-rework" 2>/dev/null
 ```
 

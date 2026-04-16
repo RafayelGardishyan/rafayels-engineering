@@ -8,15 +8,14 @@
 
 set -euo pipefail
 
-PY="/opt/homebrew/bin/python3.12"
 PLUGIN_BASE="$HOME/.claude/plugins/cache/rafayels-marketplace/rafayels-engineering"
 PLUGIN_DIR=$(ls -d "$PLUGIN_BASE"/*/ 2>/dev/null | sort -V | tail -1)
 if [[ -z "$PLUGIN_DIR" ]]; then
   exit 0
 fi
-MEM="$PLUGIN_DIR/skills/memory/scripts/memory.py"
+MEM="$PLUGIN_DIR/skills/memory/scripts/memory"
 
-if [[ ! -f "$MEM" ]]; then
+if [[ ! -x "$MEM" ]]; then
   exit 0
 fi
 
@@ -48,7 +47,7 @@ QUERY="${QUERY:0:500}"
 TITLE="${PHASE} phase: ${QUERY:0:150}"
 
 # Write the case — capture case_id for future signal emission
-RESULT=$("$PY" "$MEM" --json write \
+RESULT=$("$MEM" --json write \
   --phase "$PHASE" \
   --type "$TYPE" \
   --title "$TITLE" \
@@ -60,7 +59,7 @@ if [[ -n "$RESULT" ]]; then
   CASE_ID=$(echo "$RESULT" | jq -r '.case_id // empty' 2>/dev/null)
   if [[ -n "$CASE_ID" ]]; then
     # Emit an approval signal — the workflow completed successfully
-    "$PY" "$MEM" signal "$CASE_ID" approval 1.0 --source "hook:post-skill" 2>/dev/null || true
+    "$MEM" signal "$CASE_ID" approval 1.0 --source "hook:post-skill" 2>/dev/null || true
   fi
 fi
 

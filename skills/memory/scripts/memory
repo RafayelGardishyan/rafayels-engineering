@@ -1,0 +1,79 @@
+#!/usr/bin/env bash
+# memory — thin wrapper around memory.py that picks a Python interpreter
+# capable of loading sqlite-vec.
+#
+# Why this exists:
+#   sqlite-vec is a loadable SQLite extension. On macOS, the stock system
+#   Python (/usr/bin/python3) and pyenv-installed Python are built *without*
+#   `--enable-loadable-sqlite-extensions`, so sqlite3.Connection has no
+#   `enable_load_extension` method. `python3 memory.py …` fails on those
+#   interpreters with AttributeError.
+#
+#   Homebrew's python3.12 is built with extensions enabled. This wrapper
+#   prefers that interpreter, falls back to probing $PATH candidates, and
+#   fails loudly with guidance if nothing works.
+#
+# Usage:
+#   memory [--json] <subcommand> [args…]
+#   (drop-in replacement for `python3 skills/memory/scripts/memory.py …`)
+
+set -eu
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+MEMORY_PY="${SCRIPT_DIR}/memory.py"
+
+if [ ! -f "${MEMORY_PY}" ]; then
+  echo "memory: cannot find memory.py next to this wrapper (looked in ${SCRIPT_DIR})" >&2
+  exit 3
+fi
+
+# A Python interpreter is usable if sqlite3.Connection.enable_load_extension
+# exists. Probe candidates in priority order.
+_probe() {
+  local py="$1"
+  [ -x "$py" ] || command -v "$py" >/dev/null 2>&1 || return 1
+  "$py" -c 'import sqlite3,sys; sys.exit(0 if hasattr(sqlite3.Connection,"enable_load_extension") else 1)' 2>/dev/null
+}
+
+# Allow explicit override.
+if [ -n "${RAFAYELS_MEMORY_PYTHON:-}" ]; then
+  if _probe "${RAFAYELS_MEMORY_PYTHON}"; then
+    exec "${RAFAYELS_MEMORY_PYTHON}" "${MEMORY_PY}" "$@"
+  fi
+  echo "memory: RAFAYELS_MEMORY_PYTHON=${RAFAYELS_MEMORY_PYTHON} cannot load sqlite extensions" >&2
+  exit 3
+fi
+
+# Probe candidates in priority order. Homebrew Python on macOS ships with
+# loadable extensions enabled; system/pyenv Pythons typically do not.
+for py in \
+  /opt/homebrew/bin/python3.12 \
+  /opt/homebrew/bin/python3.11 \
+  /opt/homebrew/bin/python3.10 \
+  /usr/local/bin/python3.12 \
+  /usr/local/bin/python3.11 \
+  /usr/local/bin/python3.10 \
+  python3.12 \
+  python3.11 \
+  python3.10 \
+  python3
+do
+  if _probe "$py"; then
+    exec "$py" "${MEMORY_PY}" "$@"
+  fi
+done
+
+cat >&2 <<'EOF'
+memory: no Python interpreter with sqlite loadable extensions found.
+
+This is the macOS "sqlite3.Connection has no attribute 'enable_load_extension'"
+failure. Fix by installing Homebrew Python 3.12 and its extension-capable
+sqlite build:
+
+  brew install python@3.12
+  /opt/homebrew/bin/python3.12 -m pip install --break-system-packages \
+    -r "$(dirname "$0")/requirements.txt"
+
+Alternatively, set RAFAYELS_MEMORY_PYTHON to an interpreter you know works.
+EOF
+exit 75

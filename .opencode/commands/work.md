@@ -22,7 +22,7 @@ This command takes a work document (plan, specification, or todo file) and execu
 Before starting work, query memory for relevant past implementation cases:
 
 ```bash
-python3 ${OPENCODE_PLUGIN_ROOT}/skills/memory/scripts/memory.py query \
+${OPENCODE_PLUGIN_ROOT}/skills/memory/scripts/memory query \
   "<plan title or feature description>" --phase work --k 3 --format md 2>/dev/null
 ```
 
@@ -304,7 +304,7 @@ If cases are returned, include them in the work context. Pay attention to past f
    After the PR is created, capture this work as a memory case:
 
    ```bash
-   python3 ${OPENCODE_PLUGIN_ROOT}/skills/memory/scripts/memory.py write \
+   ${OPENCODE_PLUGIN_ROOT}/skills/memory/scripts/memory write \
      --phase work \
      --type solution \
      --query "<plan title or feature description>" \
@@ -322,12 +322,12 @@ If cases are returned, include them in the work context. Pay attention to past f
 
    - If tests passed on the first try, emit a positive CI signal:
      ```bash
-     python3 ${OPENCODE_PLUGIN_ROOT}/skills/memory/scripts/memory.py signal \
+     ${OPENCODE_PLUGIN_ROOT}/skills/memory/scripts/memory signal \
        <case_id> ci 1.0 --source "tests-passed" 2>/dev/null
      ```
    - If you had to retry or fix failing tests, emit a neutral signal:
      ```bash
-     python3 ${OPENCODE_PLUGIN_ROOT}/skills/memory/scripts/memory.py signal \
+     ${OPENCODE_PLUGIN_ROOT}/skills/memory/scripts/memory signal \
        <case_id> ci 0.0 --source "tests-retried" 2>/dev/null
      ```
    - If the PR gets merged later (by `/workflows:review` or user), the review workflow will emit the `merge` signal.

@@ -14,15 +14,15 @@ comes through retrieval of past cases, not by editing prompts.
 
 ```bash
 # One-time setup
-python3 ${OPENCODE_PLUGIN_ROOT}/skills/memory/scripts/memory.py init
+${OPENCODE_PLUGIN_ROOT}/skills/memory/scripts/memory init
 
 # Verify everything works
-python3 ${OPENCODE_PLUGIN_ROOT}/skills/memory/scripts/memory.py doctor
+${OPENCODE_PLUGIN_ROOT}/skills/memory/scripts/memory doctor
 ```
 
 ```bash
 # Write a case
-python3 ${OPENCODE_PLUGIN_ROOT}/skills/memory/scripts/memory.py write \
+${OPENCODE_PLUGIN_ROOT}/skills/memory/scripts/memory write \
   --phase plan \
   --query "How to structure marketplace sync" \
   --plan "Use rsync -a --delete for mirroring" \
@@ -32,13 +32,13 @@ python3 ${OPENCODE_PLUGIN_ROOT}/skills/memory/scripts/memory.py write \
 
 ```bash
 # Retrieve relevant past cases for a phase
-python3 ${OPENCODE_PLUGIN_ROOT}/skills/memory/scripts/memory.py query \
+${OPENCODE_PLUGIN_ROOT}/skills/memory/scripts/memory query \
   "setting up marketplace sync" --phase plan --k 3
 ```
 
 ```bash
 # Add a signal (success, failure, review outcome, etc.)
-python3 ${OPENCODE_PLUGIN_ROOT}/skills/memory/scripts/memory.py signal \
+${OPENCODE_PLUGIN_ROOT}/skills/memory/scripts/memory signal \
   42 merge 1.0 --source "pr:#123"
 ```
 
@@ -140,8 +140,8 @@ All commands accept `--json` for machine-readable output.
 
 ```bash
 pip install -r ${OPENCODE_PLUGIN_ROOT}/skills/memory/scripts/requirements.txt
-python3 ${OPENCODE_PLUGIN_ROOT}/skills/memory/scripts/memory.py init
-python3 ${OPENCODE_PLUGIN_ROOT}/skills/memory/scripts/memory.py doctor
+${OPENCODE_PLUGIN_ROOT}/skills/memory/scripts/memory init
+${OPENCODE_PLUGIN_ROOT}/skills/memory/scripts/memory doctor
 ```
 
 First invocation downloads the BGE-small model (~67MB) into
@@ -176,7 +176,7 @@ brew install python@3.12
 
 Then invoke `memory.py` with Homebrew Python explicitly:
 ```bash
-/opt/homebrew/bin/python3.12 ${OPENCODE_PLUGIN_ROOT}/skills/memory/scripts/memory.py <subcommand>
+${OPENCODE_PLUGIN_ROOT}/skills/memory/scripts/memory <subcommand>
 ```
 
 **Alternative**: rebuild pyenv Python with extension support:
@@ -218,7 +218,7 @@ cases (via normal workflow use) or run `memory seed` to bootstrap.
 
 **Daemon won't start**
 ```bash
-python3 ${OPENCODE_PLUGIN_ROOT}/skills/memory/scripts/memory.py daemon-stop
+${OPENCODE_PLUGIN_ROOT}/skills/memory/scripts/memory daemon-stop
 # Delete stale PID file if needed
 rm -f /tmp/rafayels-memory-$(id -u)/embed.pid
 # Next query will auto-spawn a fresh daemon

@@ -267,7 +267,7 @@ After review and compound complete:
 2. **Emit final merge signal to memory** (if cases were written during the run):
 
    ```bash
-   python3 ${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory.py signal \
+   ${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory signal \
      <work_case_id> merge 1.0 --source "pr:<PR number>" 2>/dev/null
    ```
 

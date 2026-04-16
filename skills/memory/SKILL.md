@@ -15,15 +15,15 @@ comes through retrieval of past cases, not by editing prompts.
 
 ```bash
 # One-time setup
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory.py init
+${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory init
 
 # Verify everything works
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory.py doctor
+${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory doctor
 ```
 
 ```bash
 # Write a case
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory.py write \
+${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory write \
   --phase plan \
   --query "How to structure marketplace sync" \
   --plan "Use rsync -a --delete for mirroring" \
@@ -33,13 +33,13 @@ python3 ${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory.py write \
 
 ```bash
 # Retrieve relevant past cases for a phase
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory.py query \
+${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory query \
   "setting up marketplace sync" --phase plan --k 3
 ```
 
 ```bash
 # Add a signal (success, failure, review outcome, etc.)
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory.py signal \
+${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory signal \
   42 merge 1.0 --source "pr:#123"
 ```
 
@@ -141,8 +141,8 @@ All commands accept `--json` for machine-readable output.
 
 ```bash
 pip install -r ${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/requirements.txt
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory.py init
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory.py doctor
+${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory init
+${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory doctor
 ```
 
 First invocation downloads the BGE-small model (~67MB) into
@@ -167,7 +167,7 @@ First invocation downloads the BGE-small model (~67MB) into
 
 **Cause**: macOS system Python and pyenv-installed Python are built *without* the loadable SQLite extension API. sqlite-vec cannot load into these interpreters.
 
-**Fix**: Use **Homebrew Python 3.12** which ships with `--enable-loadable-sqlite-extensions`:
+**Fix**: Invoke the bundled `memory` wrapper instead of `python3 memory.py`. The wrapper probes for an extension-capable interpreter (Homebrew `python3.12`, then `python3.11`, `python3.10`) and falls back with an actionable error message. Install dependencies into Homebrew Python 3.12 once:
 
 ```bash
 brew install python@3.12
@@ -175,10 +175,12 @@ brew install python@3.12
   -r ${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/requirements.txt
 ```
 
-Then invoke `memory.py` with Homebrew Python explicitly:
+Then use the wrapper everywhere:
 ```bash
-/opt/homebrew/bin/python3.12 ${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory.py <subcommand>
+${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory <subcommand>
 ```
+
+Override the interpreter explicitly with `RAFAYELS_MEMORY_PYTHON=/path/to/python`.
 
 **Alternative**: rebuild pyenv Python with extension support:
 ```bash
@@ -219,7 +221,7 @@ cases (via normal workflow use) or run `memory seed` to bootstrap.
 
 **Daemon won't start**
 ```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory.py daemon-stop
+${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory daemon-stop
 # Delete stale PID file if needed
 rm -f /tmp/rafayels-memory-$(id -u)/embed.pid
 # Next query will auto-spawn a fresh daemon

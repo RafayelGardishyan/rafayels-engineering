@@ -64,7 +64,7 @@ If a review agent flags any file in these directories for cleanup or removal, di
 Before dispatching reviewers, query memory for relevant past review cases:
 
 ```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory.py query \
+${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory query \
   "<PR title or change summary>" --phase review --k 3 --format md 2>/dev/null
 ```
 
@@ -393,7 +393,7 @@ After creating all todo files, present comprehensive summary:
 After the summary report is generated, capture the review outcome to memory:
 
 ```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory.py write \
+${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory write \
   --phase review \
   --type pattern \
   --query "<PR title>" \
@@ -411,7 +411,7 @@ Then emit a `review` signal based on severity:
 - Any P1 → `review -1.0`
 
 ```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory.py signal \
+${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory signal \
   <review_case_id> review <score> --source "phase:review" 2>/dev/null
 ```
 

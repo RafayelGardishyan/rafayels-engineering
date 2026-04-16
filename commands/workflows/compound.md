@@ -26,7 +26,7 @@ Captures problem solutions while context is fresh, creating structured documenta
 Before dispatching research subagents, query memory for similar solved problems:
 
 ```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory.py query \
+${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory query \
   "<problem description>" --phase compound --k 3 --format md 2>/dev/null
 ```
 
@@ -189,7 +189,7 @@ issues occur in the Email Processing or Brief System modules.
 After the solution document is written, also capture the compound event to memory:
 
 ```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory.py write \
+${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory write \
   --phase compound \
   --type solution \
   --query "<problem description>" \
@@ -203,7 +203,7 @@ python3 ${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory.py write \
 Compound events get automatic approval signals since they represent confirmed solutions:
 
 ```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory.py signal \
+${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory signal \
   <case_id> approval 1.0 --source "phase:compound" 2>/dev/null
 ```
 
