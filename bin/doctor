@@ -1,0 +1,114 @@
+#!/usr/bin/env bash
+# doctor — verify that this rafayels-engineering checkout is healthy:
+# .rafayels/ config resolves, referenced vault paths exist on disk, and
+# MCP servers have their requirements files.
+#
+# Exit codes: 0 = healthy, 1 = warnings only, 2 = errors.
+#
+# Usage: bin/doctor
+
+set -uo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+PROJECT_CONFIG="${PLUGIN_ROOT}/skills/project-config/scripts/project-config"
+CONFIG_YAML="${PLUGIN_ROOT}/.rafayels/config.yaml"
+LOCAL_YAML="${PLUGIN_ROOT}/.rafayels/config.local.yaml"
+GITIGNORE="${PLUGIN_ROOT}/.gitignore"
+
+errors=0
+warnings=0
+
+say() { printf "  [%s] %s\n" "$1" "$2"; }
+pass() { say "PASS" "$1"; }
+warn() { say "WARN" "$1"; warnings=$((warnings + 1)); }
+fail() { say "FAIL" "$1"; errors=$((errors + 1)); }
+
+echo "Checking rafayels-engineering at ${PLUGIN_ROOT}"
+echo
+
+cd "${PLUGIN_ROOT}"
+
+# Config file ------------------------------------------------------------
+if [[ ! -f "${CONFIG_YAML}" ]]; then
+  fail ".rafayels/config.yaml missing — run: ${PROJECT_CONFIG} init"
+  echo
+  echo "Summary: ${errors} error(s), ${warnings} warning(s)"
+  exit 2
+fi
+pass ".rafayels/config.yaml exists"
+
+mode="$(stat -f '%A' "${CONFIG_YAML}" 2>/dev/null || stat -c '%a' "${CONFIG_YAML}" 2>/dev/null || echo "?")"
+if [[ "${mode}" == "600" ]]; then
+  pass "config.yaml mode is 0600"
+else
+  warn "config.yaml mode is ${mode} (expected 600) — run: chmod 600 ${CONFIG_YAML}"
+fi
+
+# Schema check via CLI ---------------------------------------------------
+if ! "${PROJECT_CONFIG}" check >/dev/null 2>&1; then
+  fail "$(${PROJECT_CONFIG} check 2>&1 | head -1)"
+else
+  pass "config resolves (project-config check)"
+fi
+
+# Resolved values --------------------------------------------------------
+vault_path="$("${PROJECT_CONFIG}" get vault.path 2>/dev/null || true)"
+adr_project="$("${PROJECT_CONFIG}" get adr.project 2>/dev/null || true)"
+dev_log_sub="$("${PROJECT_CONFIG}" get dev_log.subpath 2>/dev/null || true)"
+
+if [[ -n "${vault_path}" && -d "${vault_path}" ]]; then
+  pass "vault.path exists: ${vault_path}"
+else
+  fail "vault.path does not exist on disk: ${vault_path}"
+fi
+
+if [[ -n "${vault_path}" && -n "${dev_log_sub}" ]]; then
+  dev_log_dir="${vault_path}/${dev_log_sub}"
+  if [[ -d "${dev_log_dir}" ]]; then
+    pass "dev-log dir exists: ${dev_log_dir}"
+  else
+    warn "dev-log dir missing — run: mkdir -p \"${dev_log_dir}\""
+  fi
+fi
+
+if [[ -n "${vault_path}" && -n "${adr_project}" ]]; then
+  adr_dir="${vault_path}/Documentatie/${adr_project}/ADR"
+  if [[ -d "${adr_dir}" ]]; then
+    pass "ADR project folder exists: ${adr_dir}"
+  else
+    warn "ADR folder missing — obsidian-adr MCP won't discover '${adr_project}'"
+    echo "       fix: mkdir -p \"${adr_dir}\""
+  fi
+fi
+
+# gitignore --------------------------------------------------------------
+if [[ -f "${GITIGNORE}" ]] && grep -qxF ".rafayels/config.local.yaml" "${GITIGNORE}"; then
+  pass ".rafayels/config.local.yaml is in .gitignore"
+else
+  fail ".rafayels/config.local.yaml NOT in .gitignore — personal overrides may leak"
+fi
+
+if [[ -f "${LOCAL_YAML}" ]]; then
+  pass "personal overrides present (config.local.yaml)"
+fi
+
+# MCP server requirements ------------------------------------------------
+for server in codex-bridge project-config; do
+  req="${PLUGIN_ROOT}/mcp-servers/${server}/requirements.txt"
+  if [[ -f "${req}" ]]; then
+    pass "mcp-servers/${server}/requirements.txt"
+  else
+    fail "mcp-servers/${server}/requirements.txt missing"
+  fi
+done
+
+echo
+echo "Summary: ${errors} error(s), ${warnings} warning(s)"
+if [[ "${errors}" -gt 0 ]]; then
+  exit 2
+elif [[ "${warnings}" -gt 0 ]]; then
+  exit 1
+fi
+exit 0
