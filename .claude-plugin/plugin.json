@@ -27,14 +27,14 @@
       "type": "stdio",
       "command": "python3",
       "args": [
-        "mcp-servers/codex-bridge/server.py"
+        "${CLAUDE_PLUGIN_ROOT}/mcp-servers/codex-bridge/server.py"
       ]
     },
     "project-config": {
       "type": "stdio",
       "command": "python3",
       "args": [
-        "mcp-servers/project-config/server.py"
+        "${CLAUDE_PLUGIN_ROOT}/mcp-servers/project-config/server.py"
       ]
     }
   },
