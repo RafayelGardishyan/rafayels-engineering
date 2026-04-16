@@ -2,6 +2,6 @@ schema_version: 1
 vault:
   path: ~/Documents/vault/Parai/Parai
 adr:
-  project: parai-core
+  project: rafayel-engineering
 dev_log:
-  subpath: Documentatie/parai-core/Dev Log
+  subpath: Documentatie/rafayel-engineering/Dev Log
