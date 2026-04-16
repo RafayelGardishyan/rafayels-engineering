@@ -1616,6 +1616,59 @@ Task({ team_name: "codebase-review", name: "worker-3", subagent_type: "general-p
 // Monitor progress with TaskList() or by reading inbox
 ```
 
+### Workflow 4: Claude + Codex Collaborative Swarm
+
+Claude plans and coordinates; Codex handles implementation. This creates a
+bidirectional loop where Claude delegates coding tasks to Codex and synthesizes
+the results.
+
+```javascript
+// === SETUP ===
+Teammate({ operation: "spawnTeam", team_name: "claude-codex-feature" })
+
+// === CREATE TASKS ===
+TaskCreate({ subject: "Plan architecture", description: "Claude: design the feature architecture", activeForm: "Planning..." })
+TaskCreate({ subject: "Implement with Codex", description: "Delegate coding task to Codex via MCP", activeForm: "Coding with Codex..." })
+TaskCreate({ subject: "Review and integrate", description: "Claude: review Codex output and integrate", activeForm: "Reviewing..." })
+
+TaskUpdate({ taskId: "2", addBlockedBy: ["1"] })
+TaskUpdate({ taskId: "3", addBlockedBy: ["2"] })
+
+// === SPAWN CLAUDE COORDINATOR ===
+Task({
+  team_name: "claude-codex-feature",
+  name: "claude-planner",
+  subagent_type: "Plan",
+  prompt: "Claim task #1. Create a concise implementation plan. Mark complete and notify team-lead.",
+  run_in_background: true
+})
+
+// === SPAWN CODEX DELEGATE ===
+Task({
+  team_name: "claude-codex-feature",
+  name: "codex-implementer",
+  subagent_type: "general-purpose",
+  prompt: `
+    Wait for task #2 to unblock.
+    Then:
+    1. Read the plan from task #1
+    2. Use the codex-bridge MCP server tool delegate_coding_task to hand off implementation
+    3. Include relevant file_paths so Codex has context
+    4. Capture Codex's final_message and file_changes
+    5. Mark task #2 complete and send the structured result to team-lead
+  `,
+  run_in_background: true
+})
+
+// Claude (you) handles task #3 manually by reviewing the inbox result
+```
+
+**Communication loop:**
+1. Claude creates the plan and spawns Codex
+2. Codex executes via MCP and writes results back to the team-lead inbox
+3. Claude reads the results, asks follow-up questions, or calls Codex again
+4. This bidirectional flow lets both agents play to their strengths
+
 ---
 
 ## Best Practices
