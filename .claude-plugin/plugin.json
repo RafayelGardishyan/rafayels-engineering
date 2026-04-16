@@ -3,9 +3,9 @@
   "version": "1.2.2",
   "description": "Rafayel's engineering toolkit: end-to-end feature workflow with brainstorm-plan-work-review-compound pipeline, case-based memory layer with vector retrieval, pattern detection and auto-PR generation, pluggable orchestrator strategies, Obsidian vault researcher, ADR management, dev logs, and project bootstrapping.",
   "author": {
-    "name": "Rafayel Gardishyan"
+    "name": "Rafayel"
   },
-  "license": "MIT",
+  "license": "GPL-3.0",
   "keywords": [
     "workflow-automation",
     "feature-pipeline",
