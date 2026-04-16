@@ -11,6 +11,16 @@ The obsidian-adr MCP server provides tools to search, read, create, merge, split
 
 All responses are TOON-encoded (Token-Oriented Object Notation) for minimal token usage. You can read TOON format natively.
 
+### Reading the examples
+
+Every example below passes `project: "parai-core"` — that's this plugin's author's own project, resolved from `.rafayels/config.yaml`. **Substitute your own value** before calling any tool. Look it up with:
+
+```bash
+${CLAUDE_PLUGIN_ROOT}/skills/project-config/scripts/project-config get adr.project
+```
+
+Or from an agent: call the `get_config_value` MCP tool with `key="adr.project"`.
+
 ## When to Use
 
 **Before any design or implementation work:**

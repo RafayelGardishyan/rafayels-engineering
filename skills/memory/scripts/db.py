@@ -14,9 +14,11 @@ Design principles:
 from __future__ import annotations
 
 import json
+import logging
 import os
 import sqlite3
 import struct
+import sys
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -24,16 +26,38 @@ from typing import Protocol, runtime_checkable
 
 import numpy as np
 
+log = logging.getLogger(__name__)
+
 # Module-level constants
 REQUIRED_SQLITE_VERSION = (3, 41, 0)
 EMBEDDING_DIM = 384
 EMBEDDING_MODEL = "BAAI/bge-small-en-v1.5"
 MIGRATIONS_DIR = Path(__file__).parent / "migrations"
 
+_FALLBACK_DB_PATH = Path.home() / ".claude" / "plugins" / "rafayels-engineering" / "memory.db"
+_RESOLVER_DIR = Path(__file__).resolve().parents[2] / "project-config" / "scripts"
+
 
 def user_scope_db_path() -> Path:
-    """Return the user-scope DB path. Creates parent directory if missing."""
-    path = Path.home() / ".claude" / "plugins" / "rafayels-engineering" / "memory.db"
+    """Return the user-scope DB path from project-config, with fallback.
+
+    Resolves `memory.db_path` via the project-config resolver when available.
+    Falls back to the hardcoded default if project-config is unavailable
+    (missing pyyaml, missing config, malformed YAML, etc.) — the memory
+    layer must stay runnable even when config is broken.
+    """
+    path = _FALLBACK_DB_PATH
+    if str(_RESOLVER_DIR) not in sys.path:
+        sys.path.insert(0, str(_RESOLVER_DIR))
+    try:
+        import resolver  # type: ignore[import-not-found]
+    except ImportError as exc:
+        log.warning("project-config unavailable (%s); using hardcoded memory DB default", exc)
+    else:
+        try:
+            path = resolver.load_config().memory_db_path
+        except resolver.ProjectConfigError as exc:
+            log.warning("project-config error (%s); using hardcoded memory DB default", exc)
     path.parent.mkdir(parents=True, exist_ok=True)
     return path
 

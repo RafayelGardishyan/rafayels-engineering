@@ -1,0 +1,7 @@
+schema_version: 1
+vault:
+  path: ~/Documents/vault/Parai/Parai
+adr:
+  project: parai-core
+dev_log:
+  subpath: Documentatie/parai-core/Dev Log

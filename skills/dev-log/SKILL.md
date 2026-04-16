@@ -10,10 +10,14 @@ argument-hint: [optional PR number or feature name]
 
 ## Quick Start
 
-Create or update today's entry at:
+Resolve the dev-log directory from project-config, then create or update
+today's entry inside it:
 
-```
-/Users/rgardishyan/Documents/vault/Parai/Parai/Documentatie/parai-core/Dev Log/YYYY-MM-DD.md
+```bash
+VAULT=$(${CLAUDE_PLUGIN_ROOT}/skills/project-config/scripts/project-config get vault.path)
+SUBPATH=$(${CLAUDE_PLUGIN_ROOT}/skills/project-config/scripts/project-config get dev_log.subpath)
+DEV_LOG_DIR="${VAULT}/${SUBPATH}"
+# Today's entry lives at: ${DEV_LOG_DIR}/YYYY-MM-DD.md
 ```
 
 Use today's date. Append if the file exists, create if it doesn't.
@@ -43,5 +47,5 @@ Use today's date. Append if the file exists, create if it doesn't.
 If UI changes were made:
 
 1. Take screenshots using the Playwright MCP
-2. Save to: `/Users/rgardishyan/Documents/vault/Parai/Parai/Documentatie/parai-core/Dev Log/assets/`
+2. Save to the `assets/` subfolder inside `${DEV_LOG_DIR}` (resolved above)
 3. Embed in the dev log with `![[assets/filename.png]]`

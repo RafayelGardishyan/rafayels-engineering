@@ -5,3 +5,5 @@ __pycache__/
 .opencode/cache/
 .opencode/node_modules/
 
+# Per-user project-config overrides (team defaults at .rafayels/config.yaml are tracked)
+.rafayels/config.local.yaml

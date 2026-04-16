@@ -65,8 +65,10 @@ This skill is model-invocable. It should auto-activate when:
          ├─(vector ops)─> embedder.py ─> embed_daemon.py (Unix socket)
          │                                  fallback: in-process fastembed
          │
-         └─(storage)──> db.py ─> sqlite-vec @ ~/.claude/plugins/
-                                 rafayels-engineering/memory.db
+         └─(storage)──> db.py ─> sqlite-vec @ memory.db_path
+                                 (default: ~/.claude/plugins/
+                                  rafayels-engineering/memory.db;
+                                  override via project-config)
 ```
 
 ### Key Design Decisions
@@ -228,5 +230,7 @@ rm -f /tmp/rafayels-memory-$(id -u)/embed.pid
 ```
 
 **Cross-project learning not working**
-The DB is user-scope at `~/.claude/plugins/rafayels-engineering/memory.db` —
-shared across all projects. Verify the path with `memory doctor --json`.
+The DB path comes from project-config's `memory.db_path` key (default:
+`~/.claude/plugins/rafayels-engineering/memory.db`) — user-scope and
+shared across all projects. Verify the path with `memory doctor --json`
+or `project-config get memory.db_path`.
