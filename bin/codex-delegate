@@ -1,0 +1,147 @@
+#!/usr/bin/env bash
+# codex-delegate — shell fallback for the codex-bridge MCP server.
+#
+# Use this when you want to delegate a coding task to Codex from a shell
+# (or from Claude Code when the codex-bridge MCP server isn't loaded).
+#
+# Contract matches the MCP delegate_coding_task tool's defaults:
+#   - sandbox: workspace-write (can read/write in cwd)
+#   - working dir: git root (or current dir if not in a repo)
+#   - timeout: 600s (override with --timeout)
+#   - JSON events logged to stderr; final message printed to stdout
+#
+# Usage:
+#   bin/codex-delegate "task description"
+#   bin/codex-delegate --files src/foo.py,tests/test_foo.py "task description"
+#   bin/codex-delegate --timeout 1800 --context "follow pattern in src/bar.py" "task"
+#   bin/codex-delegate --read-only "question about the codebase"
+
+set -euo pipefail
+
+FILES=""
+CONTEXT=""
+SANDBOX="workspace-write"
+TIMEOUT=600
+MODEL=""
+SKIP_GIT=0
+
+usage() {
+  cat <<'EOF'
+Usage: codex-delegate [OPTIONS] <task description>
+
+Options:
+  --files F1,F2,...      Comma-separated file paths (relative to cwd).
+  --context TEXT         Extra context appended to the prompt.
+  --sandbox MODE         read-only | workspace-write (default) | danger-full-access.
+  --read-only            Shortcut for --sandbox read-only.
+  --timeout SECONDS      Kill Codex after this long (default 600).
+  --model MODEL          Codex model override (e.g., o3).
+  --skip-git-check       Run even outside a git repo.
+  -h, --help             Show this help.
+
+Environment:
+  CODEX_DELEGATE_DEBUG=1 Also show Codex's full JSONL event stream.
+EOF
+  exit 0
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --files) FILES="$2"; shift 2 ;;
+    --context) CONTEXT="$2"; shift 2 ;;
+    --sandbox) SANDBOX="$2"; shift 2 ;;
+    --read-only) SANDBOX="read-only"; shift ;;
+    --timeout) TIMEOUT="$2"; shift 2 ;;
+    --model) MODEL="$2"; shift 2 ;;
+    --skip-git-check) SKIP_GIT=1; shift ;;
+    -h|--help) usage ;;
+    --) shift; break ;;
+    -*) echo "unknown option: $1" >&2; usage ;;
+    *) break ;;
+  esac
+done
+
+if [[ $# -eq 0 ]]; then
+  echo "error: task description required" >&2
+  usage
+fi
+
+TASK="$*"
+
+if ! command -v codex >/dev/null 2>&1; then
+  echo "error: codex CLI not found on PATH." >&2
+  echo "  install: brew install codex  (or see https://github.com/openai/codex)" >&2
+  exit 127
+fi
+
+# Discover working directory: git root, falling back to cwd.
+if WORKDIR="$(git rev-parse --show-toplevel 2>/dev/null)"; then
+  :
+else
+  WORKDIR="$(pwd -P)"
+fi
+
+# Build the prompt.
+PROMPT="$TASK"
+if [[ -n "$FILES" ]]; then
+  PROMPT+=$'\n\nRelevant files:\n'
+  IFS=',' read -ra ADDR <<< "$FILES"
+  for f in "${ADDR[@]}"; do
+    PROMPT+="- $f"$'\n'
+  done
+fi
+if [[ -n "$CONTEXT" ]]; then
+  PROMPT+=$'\n\nAdditional context:\n'"$CONTEXT"
+fi
+
+# Build codex exec command.
+LAST_MSG="$(mktemp -t codex-last-XXXXXX)"
+trap 'rm -f "$LAST_MSG"' EXIT
+
+CMD=(codex exec --sandbox "$SANDBOX" --color never --json -o "$LAST_MSG" -C "$WORKDIR")
+[[ -n "$MODEL" ]] && CMD+=(-m "$MODEL")
+[[ "$SKIP_GIT" -eq 1 ]] && CMD+=(--skip-git-repo-check)
+
+EVENT_LOG="$(mktemp -t codex-events-XXXXXX)"
+trap 'rm -f "$LAST_MSG" "$EVENT_LOG"' EXIT
+
+# Run codex with timeout. `timeout` on macOS comes from coreutils (gtimeout)
+# or may be missing; use a backgrounded process + kill as a portable fallback.
+if command -v timeout >/dev/null 2>&1; then
+  timeout --foreground "${TIMEOUT}" "${CMD[@]}" "$PROMPT" > "$EVENT_LOG" 2>&1 || RC=$?
+elif command -v gtimeout >/dev/null 2>&1; then
+  gtimeout --foreground "${TIMEOUT}" "${CMD[@]}" "$PROMPT" > "$EVENT_LOG" 2>&1 || RC=$?
+else
+  "${CMD[@]}" "$PROMPT" > "$EVENT_LOG" 2>&1 &
+  CODEX_PID=$!
+  (
+    sleep "$TIMEOUT"
+    kill -9 "$CODEX_PID" 2>/dev/null
+  ) &
+  WATCHDOG_PID=$!
+  wait "$CODEX_PID" || RC=$?
+  kill "$WATCHDOG_PID" 2>/dev/null || true
+fi
+
+RC="${RC:-0}"
+
+if [[ "${CODEX_DELEGATE_DEBUG:-0}" == "1" ]]; then
+  echo "--- codex event stream (debug) ---" >&2
+  cat "$EVENT_LOG" >&2
+  echo "--- end event stream ---" >&2
+fi
+
+if [[ -s "$LAST_MSG" ]]; then
+  echo "--- codex summary ---"
+  cat "$LAST_MSG"
+  echo
+fi
+
+if [[ "$RC" -ne 0 ]]; then
+  echo "codex exited with status $RC" >&2
+  if [[ "${CODEX_DELEGATE_DEBUG:-0}" != "1" ]]; then
+    echo "Run with CODEX_DELEGATE_DEBUG=1 to see the full event stream." >&2
+  fi
+fi
+
+exit "$RC"
