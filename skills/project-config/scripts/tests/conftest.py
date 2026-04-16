@@ -11,8 +11,9 @@ import resolver
 
 @pytest.fixture(autouse=True)
 def clear_rafayels_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    for key in [name for name in os.environ if name.startswith("RAFAYELS_")]:
-        monkeypatch.delenv(key, raising=False)
+    for key in list(os.environ):
+        if key.startswith("RAFAYELS_"):
+            monkeypatch.delenv(key, raising=False)
 
 
 @pytest.fixture(autouse=True)
