@@ -146,7 +146,9 @@ Execute the plan in the worktree.
 
 The work workflow will:
 - Break the plan into tasks
-- Implement with incremental commits
+- **Delegate pure coding tasks to Codex** via the `codex-bridge` MCP server (`delegate_coding_task`)
+- Review Codex output, iterate if needed, and integrate changes
+- Implement any remaining work with incremental commits
 - Run tests continuously
 - Follow existing patterns
 

@@ -101,7 +101,9 @@ If cases are returned, include them in the work context. Pay attention to past f
      - Mark task as in_progress in TodoWrite
      - Read any referenced files from the plan
      - Look for similar patterns in codebase
-     - Implement following existing conventions
+     - FOR pure coding tasks: delegate to Codex via the codex-bridge MCP server first
+     - Review Codex output; integrate, fix, or iterate as needed
+     - Implement any remaining work following existing conventions
      - Write tests for new functionality
      - Run tests after changes
      - Mark task as completed in TodoWrite
@@ -140,7 +142,22 @@ If cases are returned, include them in the work context. Pay attention to past f
 
    **Note:** Incremental commits use clean conventional messages without attribution footers. The final Phase 4 commit/PR includes the full attribution.
 
-3. **Follow Existing Patterns**
+3. **Delegate to Codex**
+
+   When a task is a pure coding task (implement X, refactor Y, add Z) with clear requirements:
+
+   1. **Call `delegate_coding_task`** from the `codex-bridge` MCP server
+   2. **Provide context**: include `task_description`, `file_paths`, and any relevant `context`
+   3. **Review the response**: check `status`, `final_message`, and `file_changes`
+   4. **Integrate or iterate**: if Codex's output is good, commit it; if incomplete, call again with a follow-up prompt
+   5. **Fall back to manual implementation** only when:
+      - The task requires deep project-specific convention knowledge
+      - Codex fails repeatedly or produces incorrect output
+      - The user explicitly requested manual implementation
+
+   Use `codex_answer_question` for quick technical clarifications before deciding whether to delegate.
+
+4. **Follow Existing Patterns**
 
    - The plan should reference similar code - read those files first
    - Match naming conventions exactly
