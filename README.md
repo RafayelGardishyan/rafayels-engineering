@@ -27,6 +27,7 @@ This repository now includes a Pi package manifest and native Pi extensions unde
 - `extensions/project-config.ts`
 - `extensions/playwright.ts`
 - `extensions/figma.ts`
+- `extensions/toon.ts` (global Toon preprocessor for tool output)
 
 These extensions are additive. They do **not** replace the existing Claude/OpenCode plugin files.
 
@@ -57,6 +58,30 @@ Install into the current project only:
 ```bash
 pi install -l /path/to/rafayels-engineering
 ```
+
+## Toon preprocessing (Pi)
+
+The `extensions/toon.ts` extension can be used globally with this package.
+
+It supports two Pi-native backends:
+
+- **Toon mode** (default fallback): JSON-output filtering via `hooks/toon-detect.sh`
+- **RTK mode** via `rtk rewrite`
+
+Use one of:
+
+```bash
+export PI_TOOL_PREPROCESSOR=toon   # use only Toon
+export PI_TOOL_PREPROCESSOR=rtk    # use only RTK
+export PI_TOOL_PREPROCESSOR=auto   # prefer RTK, fallback to Toon (default)
+export PI_TOOL_PREPROCESSOR=off    # disable preprocessor
+
+# Optional binary overrides
+export TOON_BIN=/opt/homebrew/bin/toon
+export RTK_BIN=/opt/homebrew/bin/rtk
+export TOON_DETECT_SCRIPT=/path/to/custom/toon-detect.sh
+```
+
 
 ## Memory setup
 
