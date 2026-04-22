@@ -41,7 +41,9 @@ Your primary responsibility is to conduct thorough visual comparisons between im
    ```
 
 2. **Retrieve Design Specifications**
-   - Use the Figma MCP to access the corresponding design files
+   - Use the available Figma tooling to access the corresponding design files
+   - Pi: prefer `figma_get_node_from_url`, `figma_get_node`, `figma_get_file`, and `figma_get_image`
+   - Claude/OpenCode: use the existing Figma MCP flow when available
    - Extract design tokens (colors, typography, spacing, shadows)
    - Identify component specifications and design system rules
    - Note any design annotations or developer handoff notes

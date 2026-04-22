@@ -1,0 +1,23 @@
+{
+  "name": "rafayels-engineering",
+  "version": "1.2.3",
+  "description": "Rafayel's engineering toolkit: end-to-end feature workflow with brainstorm-plan-work-review-compound pipeline, case-based memory layer with vector retrieval, pattern detection and auto-PR generation, pluggable orchestrator strategies, Obsidian vault researcher, ADR management, dev logs, and project bootstrapping.",
+  "license": "GPL-3.0",
+  "keywords": [
+    "pi-package",
+    "workflow-automation",
+    "feature-pipeline",
+    "knowledge-management",
+    "claude-code",
+    "opencode"
+  ],
+  "pi": {
+    "extensions": ["extensions/*.ts"],
+    "skills": ["skills"],
+    "prompts": ["commands"]
+  },
+  "peerDependencies": {
+    "@mariozechner/pi-coding-agent": "*",
+    "@sinclair/typebox": "*"
+  }
+}

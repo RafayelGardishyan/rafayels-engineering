@@ -2,7 +2,7 @@
 name: dev-log
 description: Create or update today's dev log entry in the Obsidian vault. Use after merging a PR or completing significant work.
 disable-model-invocation: true
-allowed-tools: Read, Write, Edit, Bash(ls *), Bash(mkdir *), mcp__playwright__browser_take_screenshot
+allowed-tools: Read, Write, Edit, Bash(ls *), Bash(mkdir *), mcp__playwright__browser_take_screenshot, browser_take_screenshot
 argument-hint: [optional PR number or feature name]
 ---
 
@@ -46,6 +46,8 @@ Use today's date. Append if the file exists, create if it doesn't.
 
 If UI changes were made:
 
-1. Take screenshots using the Playwright MCP
+1. Take screenshots using the available browser tooling
+   - Pi: `browser_take_screenshot`
+   - Claude/OpenCode: Playwright MCP or equivalent browser tooling
 2. Save to the `assets/` subfolder inside `${DEV_LOG_DIR}` (resolved above)
 3. Embed in the dev log with `![[assets/filename.png]]`

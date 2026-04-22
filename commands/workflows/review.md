@@ -560,7 +560,7 @@ Task general-purpose("Run /test-browser for PR #[number]. Test all affected page
 
 The subagent will:
 1. Identify pages affected by the PR
-2. Navigate to each page and capture snapshots (using Playwright MCP or agent-browser CLI)
+2. Navigate to each page and capture snapshots (using Pi browser tools, Playwright MCP, or agent-browser CLI depending on harness)
 3. Check for console errors
 4. Test critical interactions
 5. Pause for human verification on OAuth/email/payment flows

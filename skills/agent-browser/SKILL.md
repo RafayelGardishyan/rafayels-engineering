@@ -1,6 +1,6 @@
 ---
 name: agent-browser
-description: Browser automation using Vercel's agent-browser CLI. Use when you need to interact with web pages, fill forms, take screenshots, or scrape data. Alternative to Playwright MCP - uses Bash commands with ref-based element selection. Triggers on "browse website", "fill form", "click button", "take screenshot", "scrape page", "web automation".
+description: Browser automation using Vercel's agent-browser CLI. Use when you need to interact with web pages, fill forms, take screenshots, or scrape data. Alternative to MCP/browser-tool integrations - uses Bash commands with ref-based element selection. Triggers on "browse website", "fill form", "click button", "take screenshot", "scrape page", "web automation".
 ---
 
 # agent-browser: CLI Browser Automation
@@ -202,22 +202,22 @@ Returns:
 }
 ```
 
-## vs Playwright MCP
+## vs Harness-Native Browser Tools
 
-| Feature | agent-browser (CLI) | Playwright MCP |
-|---------|---------------------|----------------|
-| Interface | Bash commands | MCP tools |
-| Selection | Refs (@e1) | Refs (e1) |
+| Feature | agent-browser (CLI) | Harness-native browser tools |
+|---------|---------------------|------------------------------|
+| Interface | Bash commands | Tool calls |
+| Selection | Refs (@e1) | Tool parameters / refs |
 | Output | Text/JSON | Tool responses |
-| Parallel | Sessions | Tabs |
-| Best for | Quick automation | Tool integration |
+| Parallel | Sessions | Harness dependent |
+| Best for | Quick automation | Integrated agent workflows |
 
 Use agent-browser when:
 - You prefer Bash-based workflows
 - You want simpler CLI commands
 - You need quick one-off automation
 
-Use Playwright MCP when:
-- You need deep MCP tool integration
-- You want tool-based responses
-- You're building complex automation
+Use harness-native browser tools when:
+- The current coding harness already exposes browser automation
+- You want tighter tool integration in prompts and workflows
+- You are standardizing around Pi-native tooling

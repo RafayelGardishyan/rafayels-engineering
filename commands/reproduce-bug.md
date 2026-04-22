@@ -22,9 +22,13 @@ Run the agents again to find any logs that could help us reproduce the bug.
 
 Keep running these agents until you have a good idea of what is going on.
 
-## Phase 2: Visual Reproduction with Playwright
+## Phase 2: Visual Reproduction with Browser Automation
 
-If the bug is UI-related or involves user flows, use Playwright to visually reproduce it:
+If the bug is UI-related or involves user flows, use browser automation to visually reproduce it.
+
+**Harness guidance:**
+- In Pi, use the native browser tools or their compatibility aliases.
+- In Claude/OpenCode, existing MCP-style calls may still be available.
 
 ### Step 1: Verify Server is Running
 
@@ -57,9 +61,9 @@ mcp__plugin_compound-engineering_pw__browser_take_screenshot({ filename: "bug-[i
 Reproduce the exact steps from the issue:
 
 1. **Read the issue's reproduction steps**
-2. **Execute each step using Playwright:**
+2. **Execute each step using browser tools:**
    - `browser_click` for clicking elements
-   - `browser_type` for filling forms
+   - `browser_type` or `browser_fill` for forms
    - `browser_snapshot` to see the current state
    - `browser_take_screenshot` to capture evidence
 
