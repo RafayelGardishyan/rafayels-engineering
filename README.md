@@ -61,27 +61,26 @@ pi install -l /path/to/rafayels-engineering
 
 ## Toon preprocessing (Pi)
 
-The `extensions/toon.ts` extension can be used globally with this package.
+`extensions/toon.ts` now runs a **transparent Pi-native preprocessing pipeline** for Bash tools:
 
-It supports two Pi-native backends:
+1. It tries to rewrite each command through `rtk rewrite` first (when available).
+2. It always applies Toon-style JSON compression to tool output in Pi when available.
 
-- **Toon mode** (default fallback): JSON-output filtering via `hooks/toon-detect.sh`
-- **RTK mode** via `rtk rewrite`
+This is enabled by default and works without special env toggles.
 
-Use one of:
+Modes are mainly for control/rollback:
 
 ```bash
-export PI_TOOL_PREPROCESSOR=toon   # use only Toon
-export PI_TOOL_PREPROCESSOR=rtk    # use only RTK
-export PI_TOOL_PREPROCESSOR=auto   # prefer RTK, fallback to Toon (default)
-export PI_TOOL_PREPROCESSOR=off    # disable preprocessor
+export PI_TOOL_PREPROCESSOR=auto   # (default) rewrite with RTK when possible, then encode output with Toon
+export PI_TOOL_PREPROCESSOR=rtk    # force RTK rewrite attempt first, then Toon encoding
+export PI_TOOL_PREPROCESSOR=toon   # skip RTK, only do Toon output encoding
+export PI_TOOL_PREPROCESSOR=off    # disable preprocessing entirely
 
-# Optional binary overrides
+# Optional binary/script overrides
 export TOON_BIN=/opt/homebrew/bin/toon
 export RTK_BIN=/opt/homebrew/bin/rtk
 export TOON_DETECT_SCRIPT=/path/to/custom/toon-detect.sh
 ```
-
 
 ## Memory setup
 

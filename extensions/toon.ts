@@ -1,6 +1,6 @@
 import { isToolCallEventType, type ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { existsSync } from "node:fs";
-import { basename, dirname, join } from "node:path";
+import { dirname, join } from "node:path";
 import { homedir } from "node:os";
 import { spawnSync } from "node:child_process";
 
@@ -15,17 +15,6 @@ type RewriteResult = {
 };
 
 type PreprocessorMode = "auto" | "toon" | "rtk" | "off";
-type Strategy = "toon" | "rtk";
-
-const BLOCKED_TOOL_NAMES = new Set([
-  "toon",
-  "rtk",
-  "toon-detect",
-  "toon-detect.sh",
-  "toon-preprocessor",
-  "toon-preprocessor.sh",
-]);
-
 function shellQuote(value: string): string {
   return `'${value.replace(/'/g, "'\\''")}'`;
 }
@@ -65,12 +54,7 @@ function normalizeToken(token: string): string {
   return token.trim().replace(/^['"](.*)['"]$/s, "$1").toLowerCase();
 }
 
-function isAssignmentToken(token: string): boolean {
-  return /^[A-Za-z_][A-Za-z0-9_]*=.*/.test(token);
-}
-
 function tokenizeTopLevel(command: string): CommandAnalysis {
-  const operators: string[] = [];
   const tokens: string[] = [];
   let token = "";
 
@@ -165,33 +149,28 @@ function tokenizeTopLevel(command: string): CommandAnalysis {
 
     if (char === "&" && command[i + 1] === "&") {
       flushToken();
-      operators.push("&&");
       i += 1;
       continue;
     }
 
     if (char === "|" && command[i + 1] === "|") {
       flushToken();
-      operators.push("||");
       i += 1;
       continue;
     }
 
     if (char === "|") {
       flushToken();
-      operators.push("|");
       continue;
     }
 
     if (char === ";") {
       flushToken();
-      operators.push(";");
       continue;
     }
 
     if (char === "\n") {
       flushToken();
-      operators.push("\n");
       continue;
     }
 
@@ -207,30 +186,14 @@ function tokenizeTopLevel(command: string): CommandAnalysis {
     tokens.push(token);
   }
 
-  return { tokens, operators };
+  return { tokens, operators: [] };
 }
 
 function getLeadingCommand(tokens: string[]): string | undefined {
-  let index = 0;
-  while (index < tokens.length && isAssignmentToken(tokens[index])) {
-    index += 1;
-  }
-  if (index >= tokens.length) {
+  if (tokens.length === 0) {
     return undefined;
   }
-  return normalizeToken(tokens[index]);
-}
-
-function containsBlockedToonUsage(tokens: string[]): boolean {
-  return tokens.some((token) => {
-    const normalized = normalizeToken(token);
-    if (BLOCKED_TOOL_NAMES.has(normalized)) {
-      return true;
-    }
-
-    const base = basename(normalized);
-    return BLOCKED_TOOL_NAMES.has(base);
-  });
+  return normalizeToken(tokens[0]);
 }
 
 function isRtkCommandCommand(command: string): boolean {
@@ -240,46 +203,6 @@ function isRtkCommandCommand(command: string): boolean {
   const tokens = analysis.tokens.map(normalizeToken);
   const leading = getLeadingCommand(tokens);
   return leading === "rtk";
-}
-
-function shouldRewriteToonCommand(command: string): boolean {
-  const trimmed = command.trim();
-  if (!trimmed) {
-    return false;
-  }
-
-  const analysis = tokenizeTopLevel(trimmed);
-
-  if (
-    analysis.operators.includes("&&") ||
-    analysis.operators.includes("||") ||
-    analysis.operators.includes("|") ||
-    analysis.operators.includes(";") ||
-    analysis.operators.includes("\n")
-  ) {
-    return false;
-  }
-
-  const tokens = analysis.tokens.map(normalizeToken);
-
-  const leading = getLeadingCommand(tokens);
-  if (!leading) {
-    return false;
-  }
-
-  if (leading === "toon" || leading === "rtk") {
-    return false;
-  }
-
-  if (containsBlockedToonUsage(tokens)) {
-    return false;
-  }
-
-  return true;
-}
-
-function rewriteWithToon(command: string, toonBin: string, detectorScript: string): string {
-  return `set -o pipefail; ${command} | TOON_BIN=${shellQuote(toonBin)} bash ${shellQuote(detectorScript)}`;
 }
 
 function getRtkExecutable(): string {
@@ -360,20 +283,8 @@ export default function (pi: ExtensionAPI) {
 
   const toonAvailable = Boolean(detectorScript && commandExists(toonBin));
   const rtkAvailable = commandExists(getRtkExecutable());
-  const callStrategy = new Map<string, Strategy>();
-
-  let warned = false;
-
-  const safeRewriteToon = (command: string): RewriteResult => {
-    if (!toonAvailable || !shouldRewriteToonCommand(command) || !detectorScript) {
-      return { changed: false, command };
-    }
-
-    return {
-      changed: true,
-      command: rewriteWithToon(command, toonBin, detectorScript),
-    };
-  };
+  const encodeEnabled = mode !== "off" && Boolean(detectorScript && toonAvailable);
+  const callIdsForEncoding = new Set<string>();
 
   const safeRewriteRtk = (command: string): RewriteResult => {
     if (!rtkAvailable) {
@@ -387,6 +298,8 @@ export default function (pi: ExtensionAPI) {
 
     return { changed: true, command: rewritten };
   };
+
+  let warned = false;
 
   pi.on("tool_call", (event, ctx) => {
     if (!isToolCallEventType("bash", event)) {
@@ -405,27 +318,15 @@ export default function (pi: ExtensionAPI) {
 
     let rewritten: RewriteResult | undefined;
 
-    if (mode === "toon") {
-      rewritten = safeRewriteToon(originalCommand);
-      if (rewritten.changed) {
-        callStrategy.set(event.toolCallId, "toon");
-      }
-    } else if (mode === "rtk") {
+    if (mode !== "toon") {
       rewritten = safeRewriteRtk(originalCommand);
       if (rewritten.changed) {
-        callStrategy.set(event.toolCallId, "rtk");
+        event.input.command = rewritten.command;
       }
-    } else {
-      // Auto: prefer RTK rewrites first, then fallback to Toon when safe.
-      rewritten = safeRewriteRtk(originalCommand);
-      if (rewritten.changed) {
-        callStrategy.set(event.toolCallId, "rtk");
-      } else {
-        rewritten = safeRewriteToon(originalCommand);
-        if (rewritten.changed) {
-          callStrategy.set(event.toolCallId, "toon");
-        }
-      }
+    }
+
+    if (encodeEnabled) {
+      callIdsForEncoding.add(event.toolCallId);
     }
 
     if (!rewritten?.changed && !warned && mode !== "off") {
@@ -434,39 +335,22 @@ export default function (pi: ExtensionAPI) {
         reason = `rtk binary not available (${getRtkExecutable()})`;
       } else if (mode === "toon" && !toonAvailable) {
         reason = `toon binary or detector script not available`;
-      } else if (mode === "auto" && !rtkAvailable && !toonAvailable) {
-        reason = `no Toon or RTK preprocessor available`;
+      } else if (mode === "auto" && !rtkAvailable) {
+        reason = `rtk not available, falling back to raw command with Toon encoding${toonAvailable ? "" : " (Toon unavailable)"}`;
       }
 
-      if (reason) {
+      if (reason && (mode !== "auto" || !rtkAvailable)) {
         ctx.ui.notify(`Tool preprocessor disabled for this command: ${reason}`, "warning");
         warned = true;
       }
-    }
-
-    if (rewritten?.changed) {
-      event.input.command = rewritten.command;
-      return;
     }
 
     return;
   });
 
   pi.on("tool_result", (event) => {
-    const strategy = callStrategy.get(event.toolCallId);
-
-    if (!strategy) {
-      return;
-    }
-
-    // Keep RTK outputs untouched; they are already preprocessed.
-    if (strategy === "rtk") {
-      callStrategy.delete(event.toolCallId);
-      return;
-    }
-
-    if (strategy !== "toon" || !detectorScript) {
-      callStrategy.delete(event.toolCallId);
+    if (!callIdsForEncoding.has(event.toolCallId) || !detectorScript) {
+      callIdsForEncoding.delete(event.toolCallId);
       return;
     }
 
@@ -489,7 +373,7 @@ export default function (pi: ExtensionAPI) {
           };
     });
 
-    callStrategy.delete(event.toolCallId);
+    callIdsForEncoding.delete(event.toolCallId);
 
     if (changed) {
       return { content: nextContent };
