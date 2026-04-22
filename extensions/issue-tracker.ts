@@ -1,10 +1,8 @@
 import { Type } from "@mariozechner/pi-ai";
-import type { ExtensionAPI, ExtensionCommandContext, Theme } from "@mariozechner/pi-coding-agent";
-import { defineTool } from "@mariozechner/pi-coding-agent";
+import { defineTool, type ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { existsSync } from "node:fs";
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { matchesKey, visibleWidth, type Focusable } from "@mariozechner/pi-tui";
 
 type IssueStatus = "open" | "closed";
 type IssuePriority = "p1" | "p2" | "p3";
@@ -79,93 +77,6 @@ async function nextIssueId(cwd: string): Promise<string> {
     return Math.max(acc, Number.parseInt(match[1] ?? "0", 10));
   }, 0);
   return `ISSUE-${String(max + 1).padStart(3, "0")}`;
-}
-
-function summarizeIssues(issues: IssueRecord[]) {
-  const open = issues.filter((issue) => issue.status === "open");
-  const closed = issues.filter((issue) => issue.status === "closed");
-  const p1 = open.filter((issue) => issue.priority === "p1").length;
-  const p2 = open.filter((issue) => issue.priority === "p2").length;
-  const p3 = open.filter((issue) => issue.priority === "p3").length;
-  return { open, closed, p1, p2, p3 };
-}
-
-function renderIssueSummary(theme: Theme, issues: IssueRecord[]) {
-  const summary = summarizeIssues(issues);
-  const parts = [
-    theme.fg("accent", "Issues"),
-    theme.fg("text", `${summary.open.length} open`),
-    theme.fg("dim", `${summary.closed.length} closed`),
-    theme.fg("error", `P1:${summary.p1}`),
-    theme.fg("warning", `P2:${summary.p2}`),
-    theme.fg("success", `P3:${summary.p3}`),
-  ];
-  return parts.join(theme.fg("dim", " • "));
-}
-
-class IssuesOverlay implements Focusable {
-  focused = false;
-  private selected = 0;
-
-  constructor(
-    private theme: Theme,
-    private issues: IssueRecord[],
-    private done: (result?: string) => void,
-  ) {}
-
-  handleInput(data: string): void {
-    if (matchesKey(data, "escape")) {
-      this.done();
-      return;
-    }
-    if (matchesKey(data, "up")) {
-      this.selected = Math.max(0, this.selected - 1);
-      return;
-    }
-    if (matchesKey(data, "down")) {
-      this.selected = Math.min(Math.max(0, this.issues.length - 1), this.selected + 1);
-      return;
-    }
-    if (matchesKey(data, "return")) {
-      const issue = this.issues[this.selected];
-      this.done(issue ? issue.id : undefined);
-    }
-  }
-
-  render(width: number): string[] {
-    const w = Math.min(width, 88);
-    const inner = w - 2;
-    const pad = (s: string) => s + " ".repeat(Math.max(0, inner - visibleWidth(s)));
-    const row = (content: string) => this.theme.fg("border", "│") + pad(content) + this.theme.fg("border", "│");
-
-    const lines: string[] = [];
-    lines.push(this.theme.fg("border", `╭${"─".repeat(inner)}╮`));
-    lines.push(row(` ${this.theme.fg("accent", "Issue Checklist")}`));
-    lines.push(row(` ${renderIssueSummary(this.theme, this.issues)}`));
-    lines.push(row(""));
-
-    if (this.issues.length === 0) {
-      lines.push(row(` ${this.theme.fg("dim", "No issues yet")}`));
-    } else {
-      for (let i = 0; i < this.issues.length; i++) {
-        const issue = this.issues[i]!;
-        const selected = i === this.selected;
-        const prefix = selected ? this.theme.fg("accent", "▶ ") : "  ";
-        const status = issue.status === "open" ? this.theme.fg("success", "[ ]") : this.theme.fg("dim", "[x]");
-        const priorityColor = issue.priority === "p1" ? "error" : issue.priority === "p2" ? "warning" : "success";
-        const text = `${prefix}${status} ${issue.id} ${this.theme.fg(priorityColor, issue.priority.toUpperCase())} ${issue.title}`;
-        lines.push(row(` ${text}`));
-      }
-    }
-
-    lines.push(row(""));
-    lines.push(row(` ${this.theme.fg("dim", "↑↓ navigate • Enter select • Esc close")}`));
-    lines.push(this.theme.fg("border", `╰${"─".repeat(inner)}╯`));
-    return lines;
-  }
-
-  invalidate(): void {}
-  dispose(): void {}
 }
 
 const issueTrackerTool = defineTool<any>({
@@ -306,44 +217,4 @@ const issueTrackerTool = defineTool<any>({
 
 export default function (pi: ExtensionAPI) {
   pi.registerTool(issueTrackerTool);
-
-  async function refreshIssueUI(ctx: { cwd: string; hasUI: boolean; ui: any }) {
-    const issues = await listIssues(ctx.cwd);
-    if (!ctx.hasUI) return;
-    const theme = ctx.ui.theme;
-    ctx.ui.setStatus("issue-summary", renderIssueSummary(theme, issues));
-
-    const openIssues = issues.filter((issue) => issue.status === "open");
-    const widgetLines = openIssues.length === 0
-      ? [theme.fg("dim", "No open issues")]
-      : openIssues.slice(0, 6).map((issue) => {
-          const priorityColor = issue.priority === "p1" ? "error" : issue.priority === "p2" ? "warning" : "success";
-          return `${theme.fg(priorityColor, "•")} ${issue.id} ${issue.title}`;
-        });
-    ctx.ui.setWidget("issue-checklist", widgetLines);
-  }
-
-  pi.on("session_start", async (_event, ctx) => {
-    await refreshIssueUI(ctx);
-  });
-
-  pi.on("tool_result", async (event, ctx) => {
-    if (event.toolName === "issue_tracker") {
-      await refreshIssueUI(ctx);
-    }
-  });
-
-  pi.registerCommand("issues", {
-    description: "Show interactive issue checklist overlay",
-    handler: async (_args: string, ctx: ExtensionCommandContext) => {
-      const issues = await listIssues(ctx.cwd);
-      const selected = await ctx.ui.custom<string | undefined>(
-        (_tui, theme, _kb, done) => new IssuesOverlay(theme, issues, done),
-        { overlay: true },
-      );
-      if (selected) {
-        ctx.ui.notify(`Selected ${selected}`, "info");
-      }
-    },
-  });
 }
