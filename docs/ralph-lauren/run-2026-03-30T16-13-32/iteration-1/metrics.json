@@ -1,0 +1,76 @@
+{
+  "core_web_vitals": {
+    "lcp": {
+      "value": null,
+      "rating": "unknown"
+    },
+    "cls": {
+      "value": null,
+      "rating": "unknown"
+    },
+    "fcp": {
+      "value": 0.428,
+      "rating": "good"
+    },
+    "ttfb": {
+      "value": 0.061,
+      "rating": "good"
+    },
+    "inp": {
+      "value": null,
+      "rating": "unknown"
+    },
+    "score": 100
+  },
+  "lighthouse": {
+    "performance": 99.0,
+    "accessibility": 100,
+    "best_practices": 100,
+    "seo": 100
+  },
+  "css": {
+    "total_css_bytes": 45759,
+    "selector_count": 325,
+    "unique_hex_colors": 35,
+    "hex_colors_sample": [
+      "#000",
+      "#059669",
+      "#0891b2",
+      "#0a0e17",
+      "#0f1420",
+      "#111827",
+      "#1d4ed8",
+      "#22d3ee",
+      "#2563eb",
+      "#28c840",
+      "#2a6ad4",
+      "#333",
+      "#34d399",
+      "#374151",
+      "#3877e0",
+      "#3b82f6",
+      "#4a88e8",
+      "#555",
+      "#5a94f0",
+      "#6b7280"
+    ],
+    "font_families": [
+      "Instrument Serif",
+      "var(--font-display)",
+      "DM Mono",
+      "var(--font-body)",
+      "var(--font-mono) !important",
+      "var(--font-mono)",
+      "Schibsted Grotesk"
+    ],
+    "unique_font_sizes": 17,
+    "important_count": 13,
+    "media_query_count": 11,
+    "unit_analysis": {
+      "px_count": 204,
+      "rem_count": 37,
+      "em_count": 21,
+      "px_ratio": 0.78
+    }
+  }
+}

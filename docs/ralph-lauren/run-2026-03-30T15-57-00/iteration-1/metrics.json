@@ -1,0 +1,72 @@
+{
+  "lighthouse": {
+    "performance": 99.0,
+    "accessibility": 100,
+    "best_practices": 100,
+    "seo": 100
+  },
+  "accessibility": {
+    "violations_count": 0,
+    "passes_count": 39,
+    "incomplete_count": 2,
+    "violations": []
+  },
+  "css": {
+    "total_css_bytes": 42987,
+    "selector_count": 314,
+    "unique_hex_colors": 32,
+    "hex_colors_sample": [
+      "#000",
+      "#059669",
+      "#0891b2",
+      "#0a0e17",
+      "#0f1420",
+      "#111827",
+      "#1d4ed8",
+      "#22d3ee",
+      "#2563eb",
+      "#28c840",
+      "#333",
+      "#34d399",
+      "#374151",
+      "#3877e0",
+      "#4a88e8",
+      "#555",
+      "#6b7280",
+      "#7c3aed",
+      "#96a3b0",
+      "#a78bfa"
+    ],
+    "rgb_color_count": 34,
+    "hsl_color_count": 0,
+    "font_families": [
+      "var(--font-mono) !important",
+      "var(--font-mono)",
+      "DM Mono",
+      "var(--font-display)",
+      "Schibsted Grotesk",
+      "Instrument Serif",
+      "var(--font-body)"
+    ],
+    "unique_font_sizes": 17,
+    "font_sizes_sample": [
+      "0.6875rem",
+      "0.8125rem",
+      "0.875rem",
+      "0.8em",
+      "1.125rem",
+      "1rem",
+      "9px",
+      "clamp(24px, 3.5vw, 36px)",
+      "var(--text-2xl)",
+      "var(--text-3xl)",
+      "var(--text-base)",
+      "var(--text-lg)",
+      "var(--text-md)",
+      "var(--text-sm)",
+      "var(--text-xl)"
+    ],
+    "important_count": 12,
+    "media_query_count": 11
+  }
+}

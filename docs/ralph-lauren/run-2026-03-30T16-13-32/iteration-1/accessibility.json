@@ -1,0 +1,212 @@
+{
+  "score": 86.7,
+  "passed": 13,
+  "total": 15,
+  "checks": {
+    "image_alt_text": {
+      "pass": true,
+      "count": 0,
+      "details": "All images have alt attributes (0 decorative)"
+    },
+    "no_focus_removal": {
+      "pass": true,
+      "count": 0,
+      "details": "No focus outline removal detected"
+    },
+    "color_contrast": {
+      "pass": true,
+      "count": 0,
+      "details": "5 sampled elements all meet 4.5:1"
+    },
+    "semantic_buttons": {
+      "pass": true,
+      "count": 0,
+      "details": "All onclick handlers are on semantic interactive elements"
+    },
+    "form_labels": {
+      "pass": true,
+      "count": 0,
+      "details": "All 0 visible inputs have labels"
+    },
+    "no_placeholder_as_label": {
+      "pass": true,
+      "count": 0,
+      "details": "No inputs rely solely on placeholder as label"
+    },
+    "focus_visible_styles": {
+      "pass": true,
+      "count": 1,
+      "details": "CSS contains :focus-visible rules"
+    },
+    "reduced_motion": {
+      "pass": true,
+      "count": 1,
+      "details": "CSS contains prefers-reduced-motion media query"
+    },
+    "aria_correctness": {
+      "pass": false,
+      "count": 8,
+      "details": "8 aria-label(s) on non-interactive elements: <section aria-label=\"Introduction\">, <div aria-label=\"Plugin statistics\">, <section aria-label=\"Workflow pipeline\">"
+    },
+    "heading_hierarchy": {
+      "pass": true,
+      "count": 0,
+      "details": "17 headings in correct hierarchy"
+    },
+    "form_structure": {
+      "pass": true,
+      "count": 0,
+      "details": "All 0 form controls are inside <form> elements"
+    },
+    "dialog_element": {
+      "pass": true,
+      "count": 0,
+      "details": "No dialog roles found"
+    },
+    "skip_link": {
+      "pass": true,
+      "count": 1,
+      "details": "Skip link found: \"Skip to content\""
+    },
+    "relative_units": {
+      "pass": true,
+      "count": 4,
+      "details": "4px vs 21rem/em \u2014 16% pixel-based"
+    },
+    "click_target_size": {
+      "pass": false,
+      "count": 9,
+      "details": "9/18 elements below 44x44px: <a> 149x37px; <a> 17x29px; <code> 110x24px; <button> 55x30px; <button> 55x30px"
+    }
+  },
+  "by_severity": {
+    "P0": [
+      {
+        "name": "image_alt_text",
+        "severity": "P0",
+        "pass": true,
+        "count": 0,
+        "details": "All images have alt attributes (0 decorative)"
+      },
+      {
+        "name": "no_focus_removal",
+        "severity": "P0",
+        "pass": true,
+        "count": 0,
+        "details": "No focus outline removal detected"
+      },
+      {
+        "name": "color_contrast",
+        "severity": "P0",
+        "pass": true,
+        "count": 0,
+        "details": "5 sampled elements all meet 4.5:1"
+      }
+    ],
+    "P1": [
+      {
+        "name": "semantic_buttons",
+        "severity": "P1",
+        "pass": true,
+        "count": 0,
+        "details": "All onclick handlers are on semantic interactive elements"
+      },
+      {
+        "name": "form_labels",
+        "severity": "P1",
+        "pass": true,
+        "count": 0,
+        "details": "All 0 visible inputs have labels"
+      },
+      {
+        "name": "no_placeholder_as_label",
+        "severity": "P1",
+        "pass": true,
+        "count": 0,
+        "details": "No inputs rely solely on placeholder as label"
+      },
+      {
+        "name": "focus_visible_styles",
+        "severity": "P1",
+        "pass": true,
+        "count": 1,
+        "details": "CSS contains :focus-visible rules"
+      },
+      {
+        "name": "reduced_motion",
+        "severity": "P1",
+        "pass": true,
+        "count": 1,
+        "details": "CSS contains prefers-reduced-motion media query"
+      },
+      {
+        "name": "aria_correctness",
+        "severity": "P1",
+        "pass": false,
+        "count": 8,
+        "details": "8 aria-label(s) on non-interactive elements: <section aria-label=\"Introduction\">, <div aria-label=\"Plugin statistics\">, <section aria-label=\"Workflow pipeline\">"
+      },
+      {
+        "name": "heading_hierarchy",
+        "severity": "P1",
+        "pass": true,
+        "count": 0,
+        "details": "17 headings in correct hierarchy"
+      }
+    ],
+    "P2": [
+      {
+        "name": "form_structure",
+        "severity": "P2",
+        "pass": true,
+        "count": 0,
+        "details": "All 0 form controls are inside <form> elements"
+      },
+      {
+        "name": "dialog_element",
+        "severity": "P2",
+        "pass": true,
+        "count": 0,
+        "details": "No dialog roles found"
+      },
+      {
+        "name": "skip_link",
+        "severity": "P2",
+        "pass": true,
+        "count": 1,
+        "details": "Skip link found: \"Skip to content\""
+      },
+      {
+        "name": "relative_units",
+        "severity": "P2",
+        "pass": true,
+        "count": 4,
+        "details": "4px vs 21rem/em \u2014 16% pixel-based"
+      },
+      {
+        "name": "click_target_size",
+        "severity": "P2",
+        "pass": false,
+        "count": 9,
+        "details": "9/18 elements below 44x44px: <a> 149x37px; <a> 17x29px; <code> 110x24px; <button> 55x30px; <button> 55x30px"
+      }
+    ]
+  },
+  "failures": [
+    {
+      "name": "aria_correctness",
+      "severity": "P1",
+      "pass": false,
+      "count": 8,
+      "details": "8 aria-label(s) on non-interactive elements: <section aria-label=\"Introduction\">, <div aria-label=\"Plugin statistics\">, <section aria-label=\"Workflow pipeline\">"
+    },
+    {
+      "name": "click_target_size",
+      "severity": "P2",
+      "pass": false,
+      "count": 9,
+      "details": "9/18 elements below 44x44px: <a> 149x37px; <a> 17x29px; <code> 110x24px; <button> 55x30px; <button> 55x30px"
+    }
+  ],
+  "summary": "13/15 checks passed (86.7%). Failures: 1 major (P1), 1 minor (P2)."
+}

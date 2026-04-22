@@ -1,0 +1,76 @@
+{
+  "core_web_vitals": {
+    "lcp": {
+      "value": 0.176,
+      "rating": "good"
+    },
+    "cls": {
+      "value": 0.0069,
+      "rating": "good"
+    },
+    "fcp": {
+      "value": 0.176,
+      "rating": "good"
+    },
+    "ttfb": {
+      "value": 0.004,
+      "rating": "good"
+    },
+    "inp": {
+      "value": null,
+      "rating": "unknown"
+    },
+    "score": 90
+  },
+  "lighthouse": {
+    "performance": 67.0,
+    "accessibility": 96.0,
+    "best_practices": 100,
+    "seo": 100
+  },
+  "css": {
+    "total_css_bytes": 59712,
+    "selector_count": 431,
+    "unique_hex_colors": 35,
+    "hex_colors_sample": [
+      "#000",
+      "#059669",
+      "#0891b2",
+      "#0a0e17",
+      "#0f1420",
+      "#111827",
+      "#1d4ed8",
+      "#22d3ee",
+      "#2563eb",
+      "#28c840",
+      "#2a6ad4",
+      "#333",
+      "#34d399",
+      "#374151",
+      "#3877e0",
+      "#3b82f6",
+      "#4a88e8",
+      "#555",
+      "#5a94f0",
+      "#6b7280"
+    ],
+    "font_families": [
+      "Schibsted Grotesk",
+      "var(--font-body)",
+      "Instrument Serif",
+      "DM Mono",
+      "var(--font-mono)",
+      "var(--font-mono) !important",
+      "var(--font-display)"
+    ],
+    "unique_font_sizes": 17,
+    "important_count": 13,
+    "media_query_count": 14,
+    "unit_analysis": {
+      "px_count": 263,
+      "rem_count": 42,
+      "em_count": 25,
+      "px_ratio": 0.8
+    }
+  }
+}

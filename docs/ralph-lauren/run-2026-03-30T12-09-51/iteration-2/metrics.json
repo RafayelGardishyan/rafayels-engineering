@@ -1,0 +1,61 @@
+{
+  "lighthouse": {
+    "performance": 94.0,
+    "accessibility": 96.0,
+    "best_practices": 100,
+    "seo": 100
+  },
+  "accessibility": {
+    "raw_output": "\nPlease use browser-driver-manager to install matching versions of Chrome and ChromeDriver:\n        \n        $ npx browser-driver-manager install chrome\n        \n        This will install the latest synced versions. You may install specific synced versions using \n        \n        $ npx browser-driver-manager install chrome@<version>\n\n        where <version> is a specific version, e.g. 123.45.67, or a channel, e.g. canary.\n\n        You may also pass the `--chromedriver-path` option to axe:\n\n        $ axe --chromedriver-path <path/to/chromedriver-executable>\n"
+  },
+  "css": {
+    "total_css_bytes": 22248,
+    "selector_count": 143,
+    "unique_hex_colors": 13,
+    "hex_colors_sample": [
+      "#0a0e17",
+      "#0f1420",
+      "#22d3ee",
+      "#34d399",
+      "#3877e0",
+      "#4a88e8",
+      "#8494a7",
+      "#a78bfa",
+      "#c8d6e5",
+      "#e8f0fa",
+      "#f97316",
+      "#fb7185",
+      "#fff"
+    ],
+    "rgb_color_count": 15,
+    "hsl_color_count": 0,
+    "font_families": [
+      "var(--font-display)",
+      "DM Mono",
+      "var(--font-mono)",
+      "var(--font-body)",
+      "Instrument Serif",
+      "var(--font-mono) !important",
+      "Schibsted Grotesk"
+    ],
+    "unique_font_sizes": 14,
+    "font_sizes_sample": [
+      "10px",
+      "11px",
+      "12px",
+      "12px !important",
+      "13px",
+      "14px",
+      "16px",
+      "17px",
+      "18px",
+      "22px",
+      "9px",
+      "clamp(28px, 4vw, 44px)",
+      "clamp(32px, 5vw, 56px)",
+      "clamp(48px, 8vw, 96px)"
+    ],
+    "important_count": 5,
+    "media_query_count": 4
+  }
+}

@@ -1,0 +1,250 @@
+{
+  "scores": {
+    "heuristics": 62,
+    "typography": 72,
+    "layout": 68,
+    "color": 65,
+    "craft": 58,
+    "originality": 52,
+    "overall": 62
+  },
+  "nielsen_heuristics": {
+    "visibility_of_system_status": 5,
+    "match_real_world": 7,
+    "user_control": 6,
+    "consistency": 8,
+    "error_prevention": 4,
+    "recognition_over_recall": 7,
+    "flexibility": 5,
+    "aesthetic_minimalism": 7,
+    "error_recovery": 3,
+    "help_documentation": 5
+  },
+  "audit": {
+    "normalize": [
+      "P1: CSS custom properties are well-defined for spacing, color, and type \u2014 good token system. However, some values (e.g., nav height 56px, padding 40px) are hardcoded rather than using tokens.",
+      "P2: Font loading uses display=swap which is good, but three Google Fonts families (DM Mono, Instrument Serif, Schibsted Grotesk) creates 3 external requests \u2014 consider self-hosting or reducing to 2 families.",
+      "P2: No CSS reset/normalize imported; relies on manual `*, *::before, *::after` reset which may miss edge cases."
+    ],
+    "harden": [
+      "P0: ALL external GitHub links return HTTP 404 \u2014 the repo 'RafayelGardishyan/rafayels-marketplace' does not exist. Every CTA ('Install Plugin', 'View on GitHub') leads to a dead page. This is a ship-blocking issue.",
+      "P1: Nav brand link href='#' is a placeholder \u2014 clicking it scrolls to top but URL shows '#' which is poor UX.",
+      "P1: No error handling on copy-to-clipboard buttons (e.g., what happens if clipboard API is unavailable?).",
+      "P2: 'Coming Soon' tooltip appears on hover for certain agent cards \u2014 but there's no visual indicator these are disabled before hovering."
+    ],
+    "optimize": [
+      "P2: All CSS is inlined in a single <style> block (~47KB total HTML). For a single-page landing this is acceptable but the CSS could be extracted and cached.",
+      "P2: Two @keyframes animations (pulse, blink) defined \u2014 minimal overhead.",
+      "P3: No lazy loading needed since there are zero images \u2014 though this also means the page lacks visual richness.",
+      "P1: Three Google Fonts families loaded \u2014 FCP may be delayed. Consider font-display:optional for non-critical fonts."
+    ],
+    "adapt": [
+      "P2: Responsive breakpoints at 600px, 700px, 900px, 1100px, and 1440px \u2014 good coverage.",
+      "P2: prefers-reduced-motion media query present \u2014 good accessibility practice.",
+      "P2: Print styles present.",
+      "P2: clamp() used for heading sizes (text-2xl, text-3xl) \u2014 fluid typography is good.",
+      "P3: No dark/light mode toggle \u2014 page is dark-only. Acceptable for a dev tool but limits accessibility."
+    ],
+    "clarify": [
+      "P2: Hero subtitle 'Ship features end-to-end in Claude Code. One command takes you from idea to merged PR' is clear and concise.",
+      "P2: Pipeline section labels (Brainstorm, Plan, Work, Review, Learn & Improve) effectively communicate the workflow.",
+      "P3: '29 Specialized Agents' section could benefit from categorization labels beyond just the agent names.",
+      "P2: 'Three Commands to Ship' section effectively communicates the quick-start path.",
+      "P1: The 'Start with /use-feature and ship complete' line in the hero uses inline code styling but the command isn't copyable \u2014 should be a clickable/copyable code snippet."
+    ]
+  },
+  "links": [
+    {
+      "text": "Skip to content",
+      "href": "#main-content",
+      "status": "working",
+      "http_code": null
+    },
+    {
+      "text": "RE (Home logo)",
+      "href": "#",
+      "status": "placeholder",
+      "http_code": null
+    },
+    {
+      "text": "Workflow",
+      "href": "#workflow",
+      "status": "working",
+      "http_code": null
+    },
+    {
+      "text": "Capabilities",
+      "href": "#capabilities",
+      "status": "working",
+      "http_code": null
+    },
+    {
+      "text": "Agents",
+      "href": "#agents",
+      "status": "working",
+      "http_code": null
+    },
+    {
+      "text": "Get Started",
+      "href": "#get-started",
+      "status": "working",
+      "http_code": null
+    },
+    {
+      "text": "Install Plugin (hero)",
+      "href": "#get-started",
+      "status": "working",
+      "http_code": null
+    },
+    {
+      "text": "See How It Works",
+      "href": "#workflow",
+      "status": "working",
+      "http_code": null
+    },
+    {
+      "text": "+21 more agents",
+      "href": "https://github.com/RafayelGardishyan/rafayels-marketplace#agents",
+      "status": "broken",
+      "http_code": 404
+    },
+    {
+      "text": "Install Plugin (CTA)",
+      "href": "https://github.com/RafayelGardishyan/rafayels-marketplace",
+      "status": "broken",
+      "http_code": 404
+    },
+    {
+      "text": "View on GitHub",
+      "href": "https://github.com/RafayelGardishyan/rafayels-marketplace",
+      "status": "broken",
+      "http_code": 404
+    },
+    {
+      "text": "GitHub (footer)",
+      "href": "https://github.com/RafayelGardishyan/rafayels-marketplace",
+      "status": "broken",
+      "http_code": 404
+    },
+    {
+      "text": "Documentation",
+      "href": "https://github.com/RafayelGardishyan/rafayels-marketplace#readme",
+      "status": "broken",
+      "http_code": 404
+    },
+    {
+      "text": "Issues",
+      "href": "https://github.com/RafayelGardishyan/rafayels-marketplace/issues",
+      "status": "broken",
+      "http_code": 404
+    }
+  ],
+  "hover_assessment": {
+    "elements_tested": 5,
+    "elements_with_hover": 5,
+    "elements_missing_hover": 0,
+    "consistency": "consistent",
+    "transitions": "smooth",
+    "findings": [
+      "P2 /polish: Hover states exist on nav links (color brightening), CTA buttons (background lightening + translateY lift), secondary links (border color change), capability cards (border + shadow + lift), and agent cards (border + lift). All use smooth CSS transitions (0.15-0.3s).",
+      "P2 /delight: Hover on pipeline steps changes the step number and command text to cyan \u2014 nice detail that reinforces the color system.",
+      "P1 /polish: The 'Coming Soon' tooltip on some agent cards only appears on hover with no prior visual indication the item is disabled/unavailable. This violates visibility of system status.",
+      "P2 /polish: Focus-visible styles present with cyan outline + box-shadow on multiple element types \u2014 good keyboard accessibility.",
+      "P3 /delight: Arrow icon on the '+21 more agents' link has a translateX(4px) hover animation \u2014 subtle but effective affordance."
+    ]
+  },
+  "findings": [
+    {
+      "dimension": "craft",
+      "severity": "P0",
+      "description": "ALL 6 external GitHub links return HTTP 404. The repository 'RafayelGardishyan/rafayels-marketplace' does not exist. Both primary CTAs ('Install Plugin', 'View on GitHub'), the agents link, documentation link, and issues link are completely broken.",
+      "recommendation": "Either create the 'rafayels-marketplace' repository on GitHub, or update all hrefs to point to the correct repository URL (possibly 'rafayels-engineering').",
+      "impeccable_skill": "/harden"
+    },
+    {
+      "dimension": "craft",
+      "severity": "P1",
+      "description": "Nav brand/logo link uses href='#' \u2014 a bare hash is a placeholder, not a real link. Screen readers announce it as a link but it goes nowhere meaningful.",
+      "recommendation": "Change to href='/' or href='#main-content' for semantic correctness.",
+      "impeccable_skill": "/harden"
+    },
+    {
+      "dimension": "originality",
+      "severity": "P1",
+      "description": "The dark navy + blue accent + grid pattern background is the most common dev-tool landing page aesthetic of 2024-2026. There is nothing visually distinctive or memorable about this page compared to hundreds of similar developer tool sites (Linear, Vercel, Raycast clones).",
+      "recommendation": "Introduce at least one unexpected visual element \u2014 an interactive diagram, animated pipeline visualization, or distinctive illustration style that sets this apart.",
+      "impeccable_skill": "/bolder"
+    },
+    {
+      "dimension": "layout",
+      "severity": "P1",
+      "description": "The '29 Specialized Agents' section shows 8 agents in a grid and then a '+21 more agents' link. The grid of agent cards all look identical in structure (icon + name + description) with no visual hierarchy to indicate which are most important.",
+      "recommendation": "Feature the 3-4 most important agents prominently with larger cards, then show the rest in a compact list. Create visual hierarchy.",
+      "impeccable_skill": "/arrange"
+    },
+    {
+      "dimension": "typography",
+      "severity": "P2",
+      "description": "Body text color (#c8d6e5) on background (#0a0e17) has acceptable but not generous contrast. The dim text variant (#9aa8b8) on the dark background is borderline for WCAG AA, especially for the smaller text sizes (12-13px).",
+      "recommendation": "Increase --text-dim to at least #b0bcc8 for better readability. Avoid using var(--text-dim) on text smaller than 16px.",
+      "impeccable_skill": "/typeset"
+    },
+    {
+      "dimension": "color",
+      "severity": "P2",
+      "description": "The color palette defines cyan, orange, emerald, violet, and rose accent colors but they appear to be used only as small icon/badge accents in the capabilities and agents sections. The page is overwhelmingly monochromatic (navy + blue).",
+      "recommendation": "Use the accent colors more strategically \u2014 for section differentiation, pipeline stage coloring, or data visualization elements.",
+      "impeccable_skill": "/colorize"
+    },
+    {
+      "dimension": "craft",
+      "severity": "P2",
+      "description": "No images, illustrations, diagrams, or visual content anywhere on the page. For a product that manages a complex multi-agent workflow, there is no visual representation of what the tool actually does or looks like in action.",
+      "recommendation": "Add at least one screenshot/demo of the plugin in action, a workflow diagram, or an animated terminal showing the tool in use.",
+      "impeccable_skill": "/delight"
+    },
+    {
+      "dimension": "layout",
+      "severity": "P2",
+      "description": "The Feature Pipeline section (Brainstorm \u2192 Plan \u2192 Work \u2192 Review \u2192 Learn & Improve) is laid out as a flat grid of cards with no visual connectors showing the flow/progression between steps.",
+      "recommendation": "Add directional arrows, a progress bar, or a connected timeline to visually communicate the sequential nature of the pipeline.",
+      "impeccable_skill": "/arrange"
+    },
+    {
+      "dimension": "craft",
+      "severity": "P2",
+      "description": "The hero CTA says 'Install Plugin' but links to #get-started (scroll), while the bottom CTA also says 'Install Plugin' but links to the broken GitHub URL. Inconsistent CTA behavior for identical labels.",
+      "recommendation": "Make both 'Install Plugin' buttons behave the same \u2014 either both scroll to the install section or both go to GitHub.",
+      "impeccable_skill": "/harden"
+    },
+    {
+      "dimension": "typography",
+      "severity": "P2",
+      "description": "The hero uses Instrument Serif (italic) for 'Engineering' in the h1 \u2014 this serif-italic-on-dark treatment looks elegant but the font weight appears light, potentially reducing readability at distance/mobile.",
+      "recommendation": "Ensure the serif display font is rendering at sufficient weight. Consider adding a subtle text-shadow for better legibility on the dark background.",
+      "impeccable_skill": "/typeset"
+    },
+    {
+      "dimension": "craft",
+      "severity": "P2",
+      "description": "'Coming Soon' tooltip on agent cards only appears on hover \u2014 users have no way to know certain features are unavailable without hovering every card.",
+      "recommendation": "Add a visible badge, opacity reduction, or 'Coming Soon' label to disabled/upcoming agent cards.",
+      "impeccable_skill": "/polish"
+    },
+    {
+      "dimension": "layout",
+      "severity": "P3",
+      "description": "Footer is minimal with just 3 links and a version number. No visual separation or branded footer treatment.",
+      "recommendation": "Add a subtle divider, brief tagline, or social links to make the footer feel intentional rather than an afterthought.",
+      "impeccable_skill": "/arrange"
+    },
+    {
+      "dimension": "originality",
+      "severity": "P3",
+      "description": "The code blocks in the 'Three Commands to Ship' section use standard dark code block styling with no syntax highlighting beyond basic coloring.",
+      "recommendation": "Add proper syntax highlighting for the CLI commands, or an animated terminal effect that types out the commands.",
+      "impeccable_skill": "/delight"
+    }
+  ],
+  "summary": "A competent dark-mode developer tool landing page with solid technical foundations \u2014 proper heading hierarchy, ARIA labels, focus-visible states, responsive breakpoints, reduced-motion support, and a well-organized CSS token system. However, the site is critically undermined by ALL external links being broken (6/6 GitHub links return 404), making both CTAs completely non-functional. Visually, it's a generic dark-navy + blue dev-tool aesthetic with zero images or distinctive visual identity. The information architecture is clear but the page lacks the visual richness (diagrams, screenshots, animations) that would make the product's value proposition tangible rather than abstract."
+}

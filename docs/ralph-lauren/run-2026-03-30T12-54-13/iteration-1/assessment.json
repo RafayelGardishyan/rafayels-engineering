@@ -1,0 +1,15 @@
+{
+  "scores": {
+    "heuristics": 0,
+    "typography": 0,
+    "layout": 0,
+    "color": 0,
+    "craft": 0,
+    "originality": 0,
+    "overall": 0
+  },
+  "findings": [],
+  "summary": "Failed to parse assessment. Raw response length: 1943 chars",
+  "_raw": "Here's the complete design assessment:\n\n---\n\n## Design Assessment: Rafayel's Engineering Landing Page\n\n### Overall Score: **72/100**\n\n| Dimension | Score |\n|-----------|-------|\n| Heuristics | 72 |\n| Typography | 78 |\n| Layout | 74 |\n| Color | 76 |\n| Craft | 70 |\n| Originality | 62 |\n\n---\n\n### \ud83d\udea8 P0 \u2014 CRITICAL BLOCKER\n\n**Every external link is broken.** All 5 GitHub URLs (`github.com/rgardishyan/rafayels-engineering-marketplace`) return **HTTP 404**. This includes both \"Install Plugin\" CTAs, \"View on GitHub\", and all footer links. The page **cannot convert a single visitor**. \u2192 `/harden`\n\n---\n\n### What's Working Well\n- **Accessibility foundations** are strong: semantic HTML, proper heading hierarchy (H1\u2192H2\u2192H3), ARIA labels on all 5 sections, skip-to-content link, `:focus-visible` states, `prefers-reduced-motion` support, and a print stylesheet\n- **Design token system** is well-structured: consistent spacing scale, type scale with clamp(), proper CSS custom properties\n- **Hover states** are present on all interactive elements with smooth 0.2\u20130.3s transitions \u2014 consistent and well-executed\n- **Typography** choice (serif/sans/mono triad) is intentional and the hierarchy is clear\n\n### What Needs Work\n1. **Broken links (P0)** \u2014 Fix the repository URL immediately\n2. **Hero whitespace (P1)** \u2014 85vh is too much for the amount of content; feels empty \u2192 `/arrange`\n3. **Derivative aesthetic (P1)** \u2014 Blueprint-grid-on-dark is the 2025 dev tool clich\u00e9. Needs more personality \u2192 `/bolder`\n4. **No interactive proof (P2)** \u2014 Zero demos, animations, or interactive elements showing the tool in action \u2192 `/delight`\n5. **Agent discoverability (P2)** \u2014 Shows 8 of 29 agents, broken \"view all\" link, no search/filter \u2192 `/clarify`\n6. **Mobile pipeline flow (P2)** \u2014 Arrows disappear with no vertical replacement \u2192 `/arrange`\n\nThe full JSON assessment has been saved to:\n`docs/ralph-lauren/run-2026-03-30T12-54-13/iteration-1/assessment.json`",
+  "_parse_error": true
+}
