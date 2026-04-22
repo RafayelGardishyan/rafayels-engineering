@@ -27,9 +27,25 @@ This repository now includes a Pi package manifest and native Pi extensions unde
 - `extensions/project-config.ts`
 - `extensions/playwright.ts`
 - `extensions/figma.ts`
+- `extensions/ask-user-question.ts`
+- `extensions/issue-tracker.ts`
+- `extensions/test-workflow-tools.ts`
 - `extensions/toon.ts` (global Toon preprocessor for tool output)
 
 These extensions are additive. They do **not** replace the existing Claude/OpenCode plugin files.
+
+### New workflow primitives
+
+This package now also includes two Pi-native workflow tools:
+
+- `ask_user_question` — interactive single-question user input for workflow pauses and clarifications, including optional answer notes
+- `issue_tracker` — project-local structured issue tracking backed by JSON files in `.pi/issues/`
+
+The issue tracker also exposes a visible TUI experience:
+- an issue summary status line
+- an open-issues checklist widget
+- an `/issues` overlay command for interactive browsing
+- a `/test-ask-user-question` command for visually testing the ask-user-question flow in a real Pi session
 
 ## Installation
 

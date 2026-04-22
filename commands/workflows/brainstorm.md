@@ -33,7 +33,7 @@ Evaluate whether brainstorming is needed based on the feature description.
 - Constrained, well-defined scope
 
 **If requirements are already clear:**
-Use **AskUserQuestion tool** to suggest: "Your requirements seem detailed enough to proceed directly to planning. Should I run `/workflows:plan` instead, or would you like to explore the idea further?"
+Use **`ask_user_question`** to suggest: "Your requirements seem detailed enough to proceed directly to planning. Should I run `/workflows:plan` instead, or would you like to explore the idea further?"
 
 ### Phase 0.1b: Task Classification
 
@@ -79,13 +79,18 @@ Focus on: similar features, established patterns, CLAUDE.md guidance.
 
 #### 1.2 Collaborative Dialogue
 
-Use the **AskUserQuestion tool** to ask questions **one at a time**.
+Use **`ask_user_question`** to ask questions **one at a time**.
 
 **Guidelines (see `brainstorming` skill for detailed techniques):**
 - Prefer multiple choice when natural options exist
 - Start broad (purpose, users) then narrow (constraints, edge cases)
 - Validate assumptions explicitly
 - Ask about success criteria
+
+**Also track planning questions as todos in `issue_tracker` when helpful:**
+- Create planning todos for open questions, unresolved constraints, or follow-up research items.
+- Use `issue_tracker create` for substantial brainstorm outputs that should survive into planning.
+- Use tags like `brainstorm`, `open-question`, `research`, `decision`.
 
 **Exit condition:** Continue until the idea is clear OR user says "proceed"
 
@@ -100,7 +105,7 @@ For each approach, provide:
 
 Lead with your recommendation and explain why. Apply YAGNI—prefer simpler solutions.
 
-Use **AskUserQuestion tool** to ask which approach the user prefers.
+Use **`ask_user_question`** to ask which approach the user prefers.
 
 ### Phase 3: Capture the Design
 
@@ -153,7 +158,7 @@ ${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory signal \
 
 ### Phase 4: Handoff
 
-Use **AskUserQuestion tool** to present next steps:
+Use **`ask_user_question`** to present next steps:
 
 **Question:** "Brainstorm captured. What would you like to do next?"
 
@@ -193,5 +198,6 @@ Next: Run `/workflows:plan` when ready to implement.
 - **Ask one question at a time** - Don't overwhelm
 - **Apply YAGNI** - Prefer simpler approaches
 - **Keep outputs concise** - 200-300 words per section max
+- **Track meaningful open questions in `issue_tracker`** so planning can consume them systematically
 
 NEVER CODE! Just explore and document decisions.
