@@ -1,0 +1,18 @@
+{
+  "id": "ISSUE-001",
+  "title": "Test issue tracker from interactive conversation",
+  "status": "open",
+  "priority": "p2",
+  "tags": [
+    "test",
+    "pi"
+  ],
+  "created_at": "2026-04-22T00:00:00Z",
+  "updated_at": "2026-04-22T00:00:00Z",
+  "notes": [
+    {
+      "created_at": "2026-04-22T00:00:00Z",
+      "text": "Created as a manual verification fixture for the new issue_tracker tool."
+    }
+  ]
+}
