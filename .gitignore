@@ -1,6 +1,7 @@
 __pycache__/
 .worktrees
 node_modules/
+.pi/settings.json
 
 # OpenCode (cache only - skills/commands are tracked)
 .opencode/cache/
