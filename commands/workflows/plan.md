@@ -43,7 +43,12 @@ ls -la docs/brainstorms/*.md 2>/dev/null | head -10
 5. Use brainstorm decisions as input to the research phase
 
 **If multiple brainstorms could match:**
-Use **AskUserQuestion tool** to ask which brainstorm to use, or whether to proceed without one.
+Use **`ask_user_question`** to ask which brainstorm to use, or whether to proceed without one.
+
+**Also inspect tracked planning todos before continuing:**
+- Use `issue_tracker list` with tags like `brainstorm`, `open-question`, `research`, `decision`.
+- Fold unresolved brainstorm/planning issues into the plan's open questions, risks, or implementation tasks.
+- If an issue is resolved during planning, update or close it.
 
 **If no brainstorm found (or not relevant), run idea refinement:**
 
@@ -65,7 +70,7 @@ Determine if this is a software or non-software task.
 
 If non-software: load `references/universal-planning.md` and follow that workflow instead.
 
-Refine the idea through collaborative dialogue using the **AskUserQuestion tool**:
+Refine the idea through collaborative dialogue using **`ask_user_question`**:
 
 - Ask questions one at a time to understand the idea fully
 - Prefer multiple choice questions when natural options exist
@@ -111,6 +116,7 @@ Run these agents **in parallel** to gather local context:
 **What to look for:**
 - **Repo research:** existing patterns, CLAUDE.md guidance, technology familiarity, pattern consistency
 - **Learnings:** documented solutions in `docs/solutions/` that might apply (gotchas, patterns, lessons learned)
+- **Tracked planning issues:** unresolved items in `issue_tracker` relevant to this plan
 
 These findings inform the next step.
 
@@ -148,6 +154,7 @@ After all research steps complete, consolidate findings:
 - Note external documentation URLs and best practices (if external research was done)
 - List related issues or PRs discovered
 - Capture CLAUDE.md conventions
+- Incorporate relevant open items from `issue_tracker`
 
 **Optional validation:** Briefly summarize findings and ask if anything looks off or missing before proceeding to planning.
 
@@ -176,6 +183,7 @@ Think like a product manager - what would make this issue clear and actionable? 
 - [ ] List all necessary sections for the chosen template
 - [ ] Gather supporting materials (error logs, screenshots, design mockups)
 - [ ] Prepare code examples or reproduction steps if applicable, name the mock filenames in the lists
+- [ ] Convert meaningful open work into tracked todos via `issue_tracker` where helpful
 
 ### 3. SpecFlow Analysis
 
@@ -220,6 +228,7 @@ Apply best practices for clarity and actionability, making the issue easy to sca
 - [ ] Link to code using GitHub's permalink feature (press 'y' for permanent link)
 - [ ] Mention relevant team members with @username if needed
 - [ ] Add links to external resources with descriptive text
+- [ ] Reference relevant `issue_tracker` items where useful
 
 **Code & Examples:**
 
@@ -321,7 +330,7 @@ ${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory signal \
 
 ## Post-Generation Options
 
-After document review completes, use the **AskUserQuestion tool** to present these options:
+After document review completes, use **`ask_user_question`** to present these options:
 
 **Question:** "Plan ready at `docs/plans/YYYY-MM-DD-<type>-<name>-plan.md`. What would you like to do next?"
 

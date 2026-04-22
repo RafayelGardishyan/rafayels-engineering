@@ -28,7 +28,7 @@ Before executing any phases, select a workflow strategy.
 2. **Check for `--strategy` argument**: If the user passed `--strategy=<name>`, load that strategy file directly.
 
 3. **If no strategy specified, ask the user**:
-   Read the "When to Use" section of each discovered strategy file. Present them via AskUserQuestion:
+   Read the "When to Use" section of each discovered strategy file. Present them via `ask_user_question`:
 
    ```
    "Which workflow strategy should we use?"
@@ -84,7 +84,7 @@ Before anything else, understand the project landscape.
 
 ### Phase 1: Understand the Feature
 
-**If the feature description above is empty**, use AskUserQuestion:
+**If the feature description above is empty**, use `ask_user_question`:
 "What feature would you like to implement? Describe the problem you're solving or the functionality you want to add."
 
 Do not proceed until you have a clear feature description.
@@ -276,7 +276,7 @@ After review and compound complete:
 
 3. **Offer memory review (optional)**:
 
-   Ask the user via AskUserQuestion: "Want to run /re:memory-review to inspect
+   Ask the user via `ask_user_question`: "Want to run /re:memory-review to inspect
    the case bank from this run and check for emerging patterns?" Options:
    - **Yes** — invoke `/re:memory-review`
    - **No** — skip, continue to summary

@@ -29,6 +29,22 @@ ${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory query \
 
 If cases are returned, include them in the work context. Pay attention to past failure cases — they list things to avoid. Exit code 75 or empty output means proceed without injection.
 
+### Phase 0.6: Build the todo list from plan + tracked issues
+
+Before implementation starts:
+
+- Read the plan file completely.
+- Create a concrete todo list from the implementation phases/checklists.
+- Query `issue_tracker list` for relevant open issues (especially tags like `plan`, `work`, `review`, `open-question`, or feature-specific tags).
+- Merge plan tasks and tracked issues into one execution list.
+- **Work must proceed through this todo list in order or dependency order.**
+- **When a task or tracked issue is completed, mark it complete immediately.**
+
+Tracked issue behavior:
+- If a todo corresponds to a tracked issue, close it via `issue_tracker close` when complete.
+- If a task reveals new work that should persist beyond the current turn, create a new issue via `issue_tracker create`.
+- If partial progress matters, append progress notes via `issue_tracker append_note`.
+
 ### Phase 1: Quick Start
 
 1. **Read Plan and Clarify**
@@ -78,17 +94,13 @@ If cases are returned, include them in the work context. Pay attention to past f
    - Only proceed after user explicitly says "yes, commit to [default_branch]"
    - Never commit directly to the default branch without explicit permission
 
-   **Recommendation**: Use worktree if:
-   - You want to work on multiple features simultaneously
-   - You want to keep the default branch clean while experimenting
-   - You plan to switch between branches frequently
-
 3. **Create Todo List**
-   - Use TodoWrite to break plan into actionable tasks
+   - Build the active todo list from the plan and `issue_tracker`
    - Include dependencies between tasks
    - Prioritize based on what needs to be done first
    - Include testing and quality check tasks
    - Keep tasks specific and completable
+   - **Every finished task must be marked complete in the list and in `issue_tracker` if applicable**
 
 ### Phase 2: Execute
 
@@ -98,7 +110,7 @@ If cases are returned, include them in the work context. Pay attention to past f
 
    ```
    while (tasks remain):
-     - Mark task as in_progress in TodoWrite
+     - Mark task as in_progress in the active todo list
      - Read any referenced files from the plan
      - Look for similar patterns in codebase
      - FOR pure coding tasks: delegate to Codex via the codex-bridge MCP server first
@@ -106,12 +118,17 @@ If cases are returned, include them in the work context. Pay attention to past f
      - Implement any remaining work following existing conventions
      - Write tests for new functionality
      - Run tests after changes
-     - Mark task as completed in TodoWrite
+     - Mark task as completed in the active todo list
+     - If linked to an issue_tracker item: close it or append completion notes immediately
      - Mark off the corresponding checkbox in the plan file ([ ] → [x])
      - Evaluate for incremental commit (see below)
    ```
 
-   **IMPORTANT**: Always update the original plan document by checking off completed items. Use the Edit tool to change `- [ ]` to `- [x]` for each task you finish. This keeps the plan as a living document showing progress and ensures no checkboxes are left unchecked.
+   **IMPORTANT**:
+   - Always update the original plan document by checking off completed items.
+   - Use the `Edit` tool to change `- [ ]` to `- [x]` for each task you finish.
+   - If using tracked issues, keep them synchronized with the implementation state.
+   - Do not leave completed work open in the issue list.
 
 2. **Incremental Commits**
 
@@ -126,22 +143,6 @@ If cases are returned, include them in the work context. Pay attention to past f
 
    **Heuristic:** "Can I write a commit message that describes a complete, valuable change? If yes, commit. If the message would be 'WIP' or 'partial X', wait."
 
-   **Commit workflow:**
-   ```bash
-   # 1. Verify tests pass (use project's test command)
-   # Examples: go test ./..., npm test, pytest, go test, etc.
-
-   # 2. Stage only files related to this logical unit (not `git add .`)
-   git add <files related to this logical unit>
-
-   # 3. Commit with conventional message
-   git commit -m "feat(scope): description of this unit"
-   ```
-
-   **Handling merge conflicts:** If conflicts arise during rebasing or merging, resolve them immediately. Incremental commits make conflict resolution easier since each commit is small and focused.
-
-   **Note:** Incremental commits use clean conventional messages without attribution footers. The final Phase 4 commit/PR includes the full attribution.
-
 3. **Delegate to Codex**
 
    When a task is a pure coding task (implement X, refactor Y, add Z) with clear requirements:
@@ -155,8 +156,6 @@ If cases are returned, include them in the work context. Pay attention to past f
       - Codex fails repeatedly or produces incorrect output
       - The user explicitly requested manual implementation
 
-   Use `codex_answer_question` for quick technical clarifications before deciding whether to delegate.
-
 4. **Follow Existing Patterns**
 
    - The plan should reference similar code - read those files first
@@ -165,26 +164,18 @@ If cases are returned, include them in the work context. Pay attention to past f
    - Follow project coding standards (see CLAUDE.md)
    - When in doubt, grep for similar implementations
 
-4. **Test Continuously**
+5. **Test Continuously**
 
    - Run relevant tests after each significant change
    - Don't wait until the end to test
    - Fix failures immediately
    - Add new tests for new functionality
 
-5. **Figma Design Sync** (if applicable)
-
-   For UI work with Figma designs:
-
-   - Implement components following design specs
-   - Use figma-design-sync agent iteratively to compare
-   - Fix visual differences identified
-   - Repeat until implementation matches design
-
 6. **Track Progress**
-   - Keep TodoWrite updated as you complete tasks
+   - Keep the active todo list updated as you complete tasks
+   - Keep `issue_tracker` synchronized with actual work progress
    - Note any blockers or unexpected discoveries
-   - Create new tasks if scope expands
+   - Create new tracked issues if scope expands in a way that should persist
    - Keep user informed of major milestones
 
 ### Phase 3: Quality Check
@@ -195,36 +186,15 @@ If cases are returned, include them in the work context. Pay attention to past f
 
    ```bash
    # Run full test suite (use project's test command)
-   # Examples: go test ./..., npm test, pytest, go test, etc.
-
    # Run linting (per CLAUDE.md)
-   # Use linting-agent before pushing to origin
    ```
 
-2. **Consider Reviewer Agents** (Optional)
-
-   Use for complex, risky, or large changes:
-
-   - **code-simplicity-reviewer**: Check for unnecessary complexity
-   - **rafayel-go-reviewer**: Verify Go conventions (Go projects)
-   - **performance-oracle**: Check for performance issues
-   - **security-sentinel**: Scan for security vulnerabilities
-
-   Run reviewers in parallel with Task tool:
-
-   ```
-   Task(code-simplicity-reviewer): "Review changes for simplicity"
-   Task(rafayel-go-reviewer): "Check Go conventions"
-   ```
-
-   Present findings to user and address critical issues.
-
-3. **Final Validation**
-   - All TodoWrite tasks marked completed
+2. **Final Validation**
+   - All work todos marked completed
+   - All linked issues updated or closed
    - All tests pass
    - Linting passes
    - Code follows existing patterns
-   - Figma designs match (if applicable)
    - No console errors or warnings
 
 ### Phase 4: Ship It
@@ -233,261 +203,57 @@ If cases are returned, include them in the work context. Pay attention to past f
 
    ```bash
    git add .
-   git status  # Review what's being committed
-   git diff --staged  # Check the changes
-
-   # Commit with conventional format
-   git commit -m "$(cat <<'EOF'
-   feat(scope): description of what and why
-
-   Brief explanation if needed.
-
-   🤖 Generated with [Claude Code](https://claude.com/claude-code)
-
-   Co-Authored-By: Claude <noreply@anthropic.com>
-   EOF
-   )"
+   git status
+   git diff --staged
+   git commit -m "feat(scope): description of what and why"
    ```
 
-2. **Capture and Upload Screenshots for UI Changes** (REQUIRED for any UI work)
-
-   For **any** design changes, new views, or UI modifications, you MUST capture and upload screenshots:
-
-   **Step 1: Start dev server** (if not running)
-   ```bash
-   bin/dev  # Run in background
-   ```
-
-   **Step 2: Capture screenshots with agent-browser CLI**
-   ```bash
-   agent-browser open http://localhost:3000/[route]
-   agent-browser snapshot -i
-   agent-browser screenshot output.png
-   ```
-   See the `agent-browser` skill for detailed usage.
-
-   **Step 3: Upload using imgup skill**
-   ```bash
-   skill: imgup
-   # Then upload each screenshot:
-   imgup -h pixhost screenshot.png  # pixhost works without API key
-   # Alternative hosts: catbox, imagebin, beeimg
-   ```
-
-   **What to capture:**
-   - **New screens**: Screenshot of the new UI
-   - **Modified screens**: Before AND after screenshots
-   - **Design implementation**: Screenshot showing Figma design match
-
-   **IMPORTANT**: Always include uploaded image URLs in PR description. This provides visual context for reviewers and documents the change.
-
-3. **Create Pull Request**
+2. **Create Pull Request**
 
    ```bash
    git push -u origin feature-branch-name
-
-   gh pr create --title "Feature: [Description]" --body "$(cat <<'EOF'
-   ## Summary
-   - What was built
-   - Why it was needed
-   - Key decisions made
-
-   ## Testing
-   - Tests added/modified
-   - Manual testing performed
-
-   ## Before / After Screenshots
-   | Before | After |
-   |--------|-------|
-   | ![before](URL) | ![after](URL) |
-
-   ## Figma Design
-   [Link if applicable]
-
-   ---
-
-   [![Compound Engineered](https://img.shields.io/badge/Compound-Engineered-6366f1)](https://github.com/EveryInc/compound-engineering-plugin) 🤖 Generated with [Claude Code](https://claude.com/claude-code)
-   EOF
-   )"
+   gh pr create ...
    ```
 
-4. **Notify User**
+3. **Notify User**
    - Summarize what was completed
    - Link to PR
    - Note any follow-up work needed
    - Suggest next steps if applicable
 
-5. **Capture Case to Memory**
+4. **Capture Case to Memory**
 
-   After the PR is created, capture this work as a memory case:
+   After the PR is created, capture this work as a memory case.
 
-   ```bash
-   ${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory write \
-     --phase work \
-     --type solution \
-     --query "<plan title or feature description>" \
-     --title "<short description of what was built>" \
-     --plan "<approach summary>" \
-     --trajectory '<key actions as JSON>' \
-     --outcome "<PR URL>" \
-     --tags "<JSON array of tags>" \
-     --json 2>/dev/null
-   ```
+5. **Emit Signals**
 
-   Store the returned `case_id` for later signal emission.
-
-6. **Emit Signals**
-
-   - If tests passed on the first try, emit a positive CI signal:
-     ```bash
-     ${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory signal \
-       <case_id> ci 1.0 --source "tests-passed" 2>/dev/null
-     ```
-   - If you had to retry or fix failing tests, emit a neutral signal:
-     ```bash
-     ${CLAUDE_PLUGIN_ROOT}/skills/memory/scripts/memory signal \
-       <case_id> ci 0.0 --source "tests-retried" 2>/dev/null
-     ```
-   - If the PR gets merged later (by `/workflows:review` or user), the review workflow will emit the `merge` signal.
-
----
-
-## Swarm Mode (Optional)
-
-For complex plans with multiple independent workstreams, enable swarm mode for parallel execution with coordinated agents.
-
-### When to Use Swarm Mode
-
-| Use Swarm Mode when... | Use Standard Mode when... |
-|------------------------|---------------------------|
-| Plan has 5+ independent tasks | Plan is linear/sequential |
-| Multiple specialists needed (review + test + implement) | Single-focus work |
-| Want maximum parallelism | Simpler mental model preferred |
-| Large feature with clear phases | Small feature or bug fix |
-
-### Enabling Swarm Mode
-
-To trigger swarm execution, say:
-
-> "Make a Task list and launch an army of agent swarm subagents to build the plan"
-
-Or explicitly request: "Use swarm mode for this work"
-
-### Swarm Workflow
-
-When swarm mode is enabled, the workflow changes:
-
-1. **Create Team**
-   ```
-   Teammate({ operation: "spawnTeam", team_name: "work-{timestamp}" })
-   ```
-
-2. **Create Task List with Dependencies**
-   - Parse plan into TaskCreate items
-   - Set up blockedBy relationships for sequential dependencies
-   - Independent tasks have no blockers (can run in parallel)
-
-3. **Spawn Specialized Teammates**
-   ```
-   Task({
-     team_name: "work-{timestamp}",
-     name: "implementer",
-     subagent_type: "general-purpose",
-     prompt: "Claim implementation tasks, execute, mark complete",
-     run_in_background: true
-   })
-
-   Task({
-     team_name: "work-{timestamp}",
-     name: "tester",
-     subagent_type: "general-purpose",
-     prompt: "Claim testing tasks, run tests, mark complete",
-     run_in_background: true
-   })
-   ```
-
-4. **Coordinate and Monitor**
-   - Team lead monitors task completion
-   - Spawn additional workers as phases unblock
-   - Handle plan approval if required
-
-5. **Cleanup**
-   ```
-   Teammate({ operation: "requestShutdown", target_agent_id: "implementer" })
-   Teammate({ operation: "requestShutdown", target_agent_id: "tester" })
-   Teammate({ operation: "cleanup" })
-   ```
-
-See the `orchestrating-swarms` skill for detailed swarm patterns and best practices.
-
----
+   Emit CI / review / merge signals as appropriate.
 
 ## Key Principles
 
-### Start Fast, Execute Faster
-
-- Get clarification once at the start, then execute
-- Don't wait for perfect understanding - ask questions and move
-- The goal is to **finish the feature**, not create perfect process
-
-### The Plan is Your Guide
-
-- Work documents should reference similar code and patterns
-- Load those references and follow them
-- Don't reinvent - match what exists
-
-### Test As You Go
-
-- Run tests after each change, not at the end
-- Fix failures immediately
-- Continuous testing prevents big surprises
-
-### Quality is Built In
-
-- Follow existing patterns
-- Write tests for new code
-- Run linting before pushing
-- Use reviewer agents for complex/risky changes only
-
-### Ship Complete Features
-
-- Mark all tasks completed before moving on
-- Don't leave features 80% done
-- A finished feature that ships beats a perfect feature that doesn't
+- Work from a **real todo list**, not vague narrative progress
+- Keep **plan checkboxes** and **tracked issues** synchronized with actual execution
+- When work is done, **mark it done immediately**
+- Ship complete features, not half-finished hidden progress
 
 ## Quality Checklist
 
 Before creating PR, verify:
 
 - [ ] All clarifying questions asked and answered
-- [ ] All TodoWrite tasks marked completed
-- [ ] Tests pass (run project's test command)
-- [ ] Linting passes (use linting-agent)
+- [ ] All work todos marked completed
+- [ ] All relevant `issue_tracker` items updated or closed
+- [ ] Tests pass
+- [ ] Linting passes
 - [ ] Code follows existing patterns
-- [ ] Figma designs match implementation (if applicable)
-- [ ] Before/after screenshots captured and uploaded (for UI changes)
 - [ ] Commit messages follow conventional format
-- [ ] PR description includes summary, testing notes, and screenshots
-- [ ] PR description includes Compound Engineered badge
-
-## When to Use Reviewer Agents
-
-**Don't use by default.** Use reviewer agents only when:
-
-- Large refactor affecting many files (10+)
-- Security-sensitive changes (authentication, permissions, data access)
-- Performance-critical code paths
-- Complex algorithms or business logic
-- User explicitly requests thorough review
-
-For most features: tests + linting + following patterns is sufficient.
 
 ## Common Pitfalls to Avoid
 
-- **Analysis paralysis** - Don't overthink, read the plan and execute
-- **Skipping clarifying questions** - Ask now, not after building wrong thing
-- **Ignoring plan references** - The plan has links for a reason
-- **Testing at the end** - Test continuously or suffer later
-- **Forgetting TodoWrite** - Track progress or lose track of what's done
-- **80% done syndrome** - Finish the feature, don't move on early
-- **Over-reviewing simple changes** - Save reviewer agents for complex work
+- **Analysis paralysis**
+- **Skipping clarifying questions**
+- **Ignoring plan references**
+- **Testing only at the end**
+- **Leaving completed issues open**
+- **Updating the plan but not the tracked issues**
+- **Updating tracked issues but not the plan**
