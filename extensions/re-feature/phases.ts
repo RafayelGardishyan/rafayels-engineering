@@ -1,6 +1,6 @@
 import type { PhaseDefinition, PhaseId } from "./types.js";
 
-const adrTools = ["semantic_search", "get_adr", "query_graph", "list_adrs", "list_connections"];
+const adrTools = ["re_feature_adr", "semantic_search", "get_adr", "query_graph", "list_adrs", "list_connections"];
 const lifecycleTools = ["re_feature_status", "re_feature_record_artifact", "re_feature_advance_phase", "re_feature_request_bypass", ...adrTools];
 const readOnlyBash = {
   readOnly: true,
@@ -68,7 +68,9 @@ Strict rules:
 - Do not brainstorm solutions yet.
 - Do not create implementation plans yet.
 - Do not edit files.
-- Use the ADR plugin tools for semantic ADR search/reading/graph traversal when they are available.
+- First call re_feature_adr repo_status to determine whether project config says ADRs are in repo.
+- If adr.location=repo, use re_feature_adr search/list/get against repo ADR files instead of ADR MCP tools.
+- Otherwise use the ADR plugin tools for semantic ADR search/reading/graph traversal when they are available.
 - If ADR tools are unavailable, explicitly record that ADR research was unavailable.
 
 Required context sources:
@@ -77,7 +79,7 @@ Required context sources:
 - Existing commands/workflows related to the feature
 - Existing extensions/ or skills/ patterns if the feature touches Pi extensions
 - Open issue_tracker items that may affect this work
-- ADR plugin research when available: semantic search, read relevant ADRs, traverse related ADRs
+- ADR research: repo ADR files via re_feature_adr when adr.location=repo, otherwise ADR plugin semantic search/read/graph traversal when available
 - Dev-log context when available
 
 When complete, summarize:
@@ -95,7 +97,7 @@ Then call re_feature_advance_phase with concrete evidence.`,
       "Selected source issue, if any, has been read and incorporated",
       "Relevant README/docs/commands/extensions files scanned",
       "Existing implementation patterns identified",
-      "ADR plugin research completed through semantic search/read/graph traversal, or explicitly unavailable",
+      "ADR research completed through repo ADR files when adr.location=repo, otherwise through ADR plugin semantic search/read/graph traversal, or explicitly unavailable",
       "Related open issues checked",
       "Context summary includes constraints, patterns, blockers, and open questions",
       "No files modified",
@@ -211,7 +213,7 @@ Strict rules:
 - Prefer multiple-choice questions when natural options exist.
 - Consider 2–3 approaches with tradeoffs unless the strategy explicitly disables alternatives.
 - Apply YAGNI: choose the simplest approach that solves the stated problem.
-- Use ADR plugin tools whenever brainstorming touches architectural decisions or prior constraints.
+- Use re_feature_adr when adr.location=repo, otherwise ADR plugin tools, whenever brainstorming touches architectural decisions or prior constraints.
 - Create/update and record the brainstorm document through re_feature_record_artifact using key brainstormDoc as soon as it exists.
 
 Required brainstorm document:
@@ -256,7 +258,7 @@ Strict rules:
 - Do not edit production files.
 - Do not use general write/edit tools; create or update the plan document only through re_feature_record_artifact.
 - Do not write issue JSON files directly; use issue_tracker for issue management.
-- Use ADR plugin tools if the plan introduces or depends on architecture decisions.
+- Use re_feature_adr when adr.location=repo, otherwise ADR plugin tools, if the plan introduces or depends on architecture decisions.
 - If a new architectural decision will be required, mark it explicitly for the update_docs/ADR phase.
 - Prefer simple, incremental implementation.
 - Keep work order dependency-aware.
@@ -325,7 +327,7 @@ Strict rules:
 - Do not merge.
 - Package installation commands are allowed in this phase when needed.
 - Use issue_tracker for issue management; never write .pi/issues files directly.
-- Use ADR plugin tools whenever implementation touches architectural decisions or constraints.
+- Use re_feature_adr when adr.location=repo, otherwise ADR plugin tools, whenever implementation touches architectural decisions or constraints.
 - If a new architectural decision is made, record it as a note/artifact for update_docs; do not create ADRs yet unless explicitly allowed.
 - Prefer existing code patterns.
 - Add/update tests for behavior changes.
@@ -382,7 +384,7 @@ Strict rules:
 - Do not create a PR.
 - Do not merge.
 - Use issue_tracker for all findings; never write .pi/issues files directly.
-- Use ADR plugin tools when review findings touch architectural decisions or constraints.
+- Use re_feature_adr when adr.location=repo, otherwise ADR plugin tools, when review findings touch architectural decisions or constraints.
 - Use available review subagents/tools according to the selected strategy.
 - Create/update the review findings artifact only through re_feature_record_artifact using key reviewFindingsPath.
 
@@ -435,7 +437,7 @@ Strict rules:
 - Do not use general write/edit tools.
 - Use memory_write for durable lessons/patterns when applicable.
 - Create/update the solution document only through re_feature_record_artifact using key solutionDoc.
-- Use ADR plugin tools when capturing architectural knowledge or discovering decisions that need ADR updates.
+- Use re_feature_adr when adr.location=repo, otherwise ADR plugin tools, when capturing architectural knowledge or discovering decisions that need ADR updates.
 - If an architectural decision was made, record it for update_docs/ADR phase; do not create final ADRs here unless explicitly allowed.
 
 Required solution document:
@@ -484,7 +486,7 @@ Strict rules:
 - Do not merge.
 - Package installation commands are allowed when needed for fixes.
 - Use issue_tracker for finding state; never write .pi/issues files directly.
-- Use ADR plugin tools whenever a finding or fix touches architectural decisions or constraints.
+- Use re_feature_adr when adr.location=repo, otherwise ADR plugin tools, whenever a finding or fix touches architectural decisions or constraints.
 - Add/update tests for fixes.
 - Run relevant tests after fixes.
 - Commit local logical fix units when tests pass.
@@ -669,7 +671,7 @@ Update documentation and knowledge records after merge/automerge.
 
 Strict rules:
 - Only edit documentation/ADR/dev-log/reference files.
-- Use ADR plugin tools for ADR creation/update when architectural decisions were made.
+- Use repo ADR files when adr.location=repo, otherwise ADR plugin tools, for ADR creation/update when architectural decisions were made.
 - Use memory_write for durable lessons if not already captured.
 - Use issue_tracker for issue updates; never write .pi/issues files directly.
 - Do not change implementation code.

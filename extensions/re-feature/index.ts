@@ -4,13 +4,14 @@ import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { PHASES, getNextPhaseId } from "./phases.js";
+import { getRepoAdr, listRepoAdrs, repoAdrDirExists, resolveAdrBackend, searchRepoAdrs } from "./repo-adrs.js";
 import { checkBashAllowed, checkWriteAllowed } from "./policies.js";
 import { listStrategies, getStrategy, resolvePhase } from "./strategies.js";
 import { STATE_CUSTOM_TYPE, applyValidatorArtifacts, createInitialState, recordBypass, restoreLatestState, transitionState } from "./state.js";
 import { runValidator } from "./validator.js";
 import type { BypassKind, PhaseId, ReFeatureSourceIssue, ReFeatureState, StrategyDefinition } from "./types.js";
 
-const ADR_TOOLS = ["semantic_search", "get_adr", "query_graph", "list_adrs", "list_connections"];
+const ADR_TOOLS = ["re_feature_adr", "semantic_search", "get_adr", "query_graph", "list_adrs", "list_connections"];
 const LIFECYCLE_TOOLS = ["re_feature_status", "re_feature_record_artifact", "re_feature_advance_phase", "re_feature_request_bypass", ...ADR_TOOLS];
 
 type IssueRecord = {
@@ -65,7 +66,7 @@ async function selectSourceIssue(ctx: ExtensionCommandContext, requestedIssueId?
 
 function formatPhaseContext(state: ReFeatureState, strategy: StrategyDefinition): string {
   const phase = resolvePhase(state.phaseId, strategy);
-  return `[RE-FEATURE ENFORCED WORKFLOW ACTIVE]\n\nCurrent phase: ${phase.id} — ${phase.title}\nStrategy: ${strategy.title} (${strategy.id})\nFeature: ${state.featureDescription}\nSource issue: ${state.sourceIssue ? `${state.sourceIssue.id}: ${state.sourceIssue.title}` : "none"}\n\nObjective:\n${phase.objective}\n\nPhase prompt:\n${phase.prompt}\n${phase.strategyGuidance ? `\nStrategy guidance:\n${phase.strategyGuidance}\n` : ""}\nStrict enforcement:\n- Allowed write globs: ${phase.allowedWriteGlobs.join(", ") || "none"}\n- ADR plugin tools are available in every phase when loaded; use them whenever a phase uncovers or depends on architectural decisions.\n- Record artifacts with re_feature_record_artifact as soon as they are known.\n- Phase-gated commands are enforced. git push requires push_branch; gh pr create requires create_pr; gh pr merge requires merge.\n- To bypass a gate, use re_feature_request_bypass and obtain explicit user approval.\n\nExit criteria:\n${phase.exitCriteria.map((criterion) => `- ${criterion}`).join("\n")}\n\nWhen this phase is complete, call re_feature_advance_phase with concrete evidence. Do not proceed to the next phase without that tool approving the transition.`;
+  return `[RE-FEATURE ENFORCED WORKFLOW ACTIVE]\n\nCurrent phase: ${phase.id} — ${phase.title}\nStrategy: ${strategy.title} (${strategy.id})\nFeature: ${state.featureDescription}\nSource issue: ${state.sourceIssue ? `${state.sourceIssue.id}: ${state.sourceIssue.title}` : "none"}\n\nObjective:\n${phase.objective}\n\nPhase prompt:\n${phase.prompt}\n${phase.strategyGuidance ? `\nStrategy guidance:\n${phase.strategyGuidance}\n` : ""}\nStrict enforcement:\n- Allowed write globs: ${phase.allowedWriteGlobs.join(", ") || "none"}\n- ADR tools are available in every phase. If project config says adr.location=repo, use re_feature_adr against repo files instead of ADR MCP tools; otherwise use ADR MCP tools when loaded.\n- Record artifacts with re_feature_record_artifact as soon as they are known.\n- Phase-gated commands are enforced. git push requires push_branch; gh pr create requires create_pr; gh pr merge requires merge.\n- To bypass a gate, use re_feature_request_bypass and obtain explicit user approval.\n\nExit criteria:\n${phase.exitCriteria.map((criterion) => `- ${criterion}`).join("\n")}\n\nWhen this phase is complete, call re_feature_advance_phase with concrete evidence. Do not proceed to the next phase without that tool approving the transition.`;
 }
 
 function statusText(state: ReFeatureState): string {
@@ -196,6 +197,49 @@ export default function reFeatureExtension(pi: ExtensionAPI) {
       ctx.ui.setStatus("re-feature", undefined);
       ctx.ui.setWidget("re-feature", undefined);
       ctx.ui.notify("/re-feature enforcement aborted.", "warning");
+    },
+  });
+
+  pi.registerTool<any>({
+    name: "re_feature_adr",
+    label: "Re Feature ADR",
+    description: "Query ADRs for /re-feature. If project config sets adr.location=repo, searches repo ADR markdown files instead of relying on ADR MCP tools.",
+    parameters: Type.Object({
+      action: Type.String({ description: "repo_status, search, list, or get" }),
+      query: Type.Optional(Type.String({ description: "Search query" })),
+      id: Type.Optional(Type.String({ description: "ADR id or path for get" })),
+      limit: Type.Optional(Type.Number({ description: "Max search/list results" })),
+    }),
+    async execute(_id, params) {
+      const backend = await resolveAdrBackend(pi, state?.cwd ?? process.cwd());
+      if (params.action === "repo_status") {
+        return { content: [{ type: "text", text: JSON.stringify(backend, null, 2) }], details: backend };
+      }
+      if (backend.location !== "repo") {
+        return {
+          content: [{ type: "text", text: "Project config does not set adr.location=repo. Use ADR MCP tools when available." }],
+          details: { backend },
+        };
+      }
+      if (backend.error || !backend.repoDir || !repoAdrDirExists(backend.repoDir)) {
+        return { content: [{ type: "text", text: backend.error ?? `ADR repo dir not found: ${backend.repoDir}` }], details: { backend, error: true } };
+      }
+      const cwd = state?.cwd ?? process.cwd();
+      if (params.action === "search") {
+        const results = searchRepoAdrs(cwd, backend.repoDir, String(params.query ?? ""), params.limit ?? 8);
+        return { content: [{ type: "text", text: JSON.stringify(results, null, 2) }], details: { backend, results } };
+      }
+      if (params.action === "list") {
+        const results = listRepoAdrs(cwd, backend.repoDir).slice(0, params.limit ?? 100);
+        return { content: [{ type: "text", text: JSON.stringify(results, null, 2) }], details: { backend, results } };
+      }
+      if (params.action === "get") {
+        if (!params.id) return { content: [{ type: "text", text: "id is required for get" }], details: { backend, error: true } };
+        const adr = getRepoAdr(cwd, backend.repoDir, params.id);
+        if (!adr) return { content: [{ type: "text", text: `ADR not found: ${params.id}` }], details: { backend, error: true } };
+        return { content: [{ type: "text", text: adr.content }], details: { backend, adr } };
+      }
+      return { content: [{ type: "text", text: `Unsupported action: ${params.action}` }], details: { backend, error: true } };
     },
   });
 

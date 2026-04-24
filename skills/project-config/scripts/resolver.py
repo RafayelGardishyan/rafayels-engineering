@@ -41,6 +41,21 @@ SCHEMA: dict[str, dict[str, Any]] = {
         "expand_path": False,
         "description": "ADR project slug.",
     },
+    "adr.location": {
+        "type": str,
+        "required": False,
+        "default": "mcp",
+        "expand_path": False,
+        "description": "ADR backend location: mcp or repo.",
+    },
+    "adr.repo_dir": {
+        "type": str,
+        "required": False,
+        "default": "docs/adr",
+        "expand_path": True,
+        "allowed_prefixes": ["project_root"],
+        "description": "Project-local ADR directory when adr.location=repo.",
+    },
     "dev_log.subpath": {
         "type": str,
         "required": True,
@@ -141,6 +156,8 @@ class ProjectConfig:
     schema_version: int
     vault_path: Path
     adr_project: str
+    adr_location: str
+    adr_repo_dir: Path
     dev_log_subpath: str
     memory_db_path: Path
     docs_brainstorms_dir: Path
@@ -190,6 +207,8 @@ class ProjectConfig:
             schema_version=flat["schema_version"],
             vault_path=flat["vault.path"],
             adr_project=flat["adr.project"],
+            adr_location=flat["adr.location"],
+            adr_repo_dir=flat["adr.repo_dir"],
             dev_log_subpath=flat["dev_log.subpath"],
             memory_db_path=flat["memory.db_path"],
             docs_brainstorms_dir=flat["docs.brainstorms_dir"],
@@ -402,6 +421,10 @@ def _validate(config: dict, schema: dict) -> None:
         elif expected_type is str:
             if not isinstance(value, str):
                 raise ConfigMalformedError(f"Expected str for '{key}'.")
+
+    adr_location = flat.get("adr.location")
+    if adr_location not in {"mcp", "repo"}:
+        raise ConfigMalformedError("Expected adr.location to be 'mcp' or 'repo'.")
 
     schema_version = flat["schema_version"]
     if schema_version != _SCHEMA_VERSION:

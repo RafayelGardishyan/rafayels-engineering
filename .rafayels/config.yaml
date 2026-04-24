@@ -3,5 +3,7 @@ vault:
   path: ~/Documents/vault/Parai/Parai
 adr:
   project: rafayel-engineering
+  location: mcp
+  repo_dir: docs/decisions
 dev_log:
   subpath: Documentatie/rafayel-engineering/Dev Log

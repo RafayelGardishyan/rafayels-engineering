@@ -360,8 +360,9 @@ Must include extension/always-available workflow tools during active workflow:
 - `re_feature_advance_phase`
 - `re_feature_request_bypass`
 
-ADR plugin tools should also be available in every phase when loaded:
+ADR access should also be available in every phase. If project config sets `adr.location=repo`, use repo ADR files via `re_feature_adr` instead of ADR MCP tools. Otherwise use ADR plugin tools when loaded:
 
+- `re_feature_adr`
 - `semantic_search`
 - `get_adr`
 - `query_graph`
@@ -374,6 +375,7 @@ For `edit` / `write`, enforce `allowedWriteGlobs`. Some phases intentionally do 
 
 Examples:
 
+- ADR routing: `re_feature_adr` checks `adr.location`; when set to `repo`, search/list/get ADR markdown files from `adr.repo_dir` rather than using ADR MCP tools.
 - `gather_context`: no writes
 - `brainstorm`: no general write/edit; create/update `docs/brainstorms/**` only through `re_feature_record_artifact`
 - `plan`: no general write/edit; create/update `docs/plans/**` only through `re_feature_record_artifact`
