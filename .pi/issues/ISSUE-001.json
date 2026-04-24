@@ -1,14 +1,14 @@
 {
   "id": "ISSUE-001",
   "title": "Test issue tracker from interactive conversation",
-  "status": "open",
+  "status": "closed",
   "priority": "p2",
   "tags": [
     "test",
     "pi"
   ],
   "created_at": "2026-04-22T00:00:00Z",
-  "updated_at": "2026-04-22T00:00:00Z",
+  "updated_at": "2026-04-22T14:35:05.404Z",
   "notes": [
     {
       "created_at": "2026-04-22T00:00:00Z",
